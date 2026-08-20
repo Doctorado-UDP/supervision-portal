@@ -1,9 +1,24 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import MeetingForm from "@/components/admin/meeting-form";
+import MilestoneForm from "@/components/admin/milestone-form";
+import StudentDetailsForm from "@/components/admin/student-details-form";
 import { createClient } from "@/lib/supabase/server";
 
-function formatStatus(status: string) {
+import {
+  deleteMeeting,
+  deleteMilestone,
+  updateMilestoneStatus,
+} from "./actions";
+
+type StudentPageProps = {
+  params: Promise<{
+    studentId: string;
+  }>;
+};
+
+function formatStudentStatus(status: string) {
   switch (status) {
     case "on_track":
       return "On track";
@@ -18,11 +33,26 @@ function formatStatus(status: string) {
   }
 }
 
-type StudentPageProps = {
-  params: Promise<{
-    studentId: string;
-  }>;
-};
+function formatMilestoneStatus(status: string) {
+  switch (status) {
+    case "in_progress":
+      return "In progress";
+    case "completed":
+      return "Completed";
+    case "cancelled":
+      return "Cancelled";
+    default:
+      return "Planned";
+  }
+}
+
+function formatMeetingDate(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Amsterdam",
+  }).format(new Date(value));
+}
 
 export default async function StudentPage({
   params,
@@ -31,31 +61,83 @@ export default async function StudentPage({
 
   const supabase = await createClient();
 
-  const { data: student, error: studentError } =
-    await supabase
+  const [
+    studentResult,
+    milestonesResult,
+    meetingsResult,
+  ] = await Promise.all([
+    supabase
       .from("students")
       .select(
         "id, user_id, programme, start_date, target_completion_date, status"
       )
       .eq("id", studentId)
-      .single();
+      .single(),
 
-  if (studentError || !student) {
+    supabase
+      .from("milestones")
+      .select(
+        "id, title, description, target_date, status, completed_at"
+      )
+      .eq("student_id", studentId)
+      .order("target_date", {
+        ascending: true,
+      }),
+
+    supabase
+      .from("meetings")
+      .select(
+        "id, scheduled_at, notes"
+      )
+      .eq("student_id", studentId)
+      .order("scheduled_at", {
+        ascending: false,
+      }),
+  ]);
+
+  if (
+    studentResult.error ||
+    !studentResult.data
+  ) {
     notFound();
   }
 
-  const { data: profile, error: profileError } =
-    await supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", student.user_id)
-      .single();
+  if (
+    milestonesResult.error ||
+    meetingsResult.error
+  ) {
+    console.error(
+      milestonesResult.error,
+      meetingsResult.error
+    );
+
+    throw new Error(
+      "Unable to load supervision information."
+    );
+  }
+
+  const student = studentResult.data;
+
+  const {
+    data: profile,
+    error: profileError,
+  } = await supabase
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", student.user_id)
+    .single();
 
   if (profileError || !profile) {
     throw new Error(
       "Unable to load the student's profile."
     );
   }
+
+  const milestones =
+    milestonesResult.data ?? [];
+
+  const meetings =
+    meetingsResult.data ?? [];
 
   return (
     <div className="space-y-8">
@@ -76,86 +158,302 @@ export default async function StudentPage({
             <p className="mt-2 text-gray-600">
               {student.programme}
             </p>
+
+            <p className="mt-1 text-sm text-gray-500">
+              {profile.email}
+            </p>
           </div>
 
           <span className="inline-flex w-fit rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700">
-            {formatStatus(student.status)}
+            {formatStudentStatus(
+              student.status
+            )}
           </span>
         </div>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-gray-500">
-            Email
-          </p>
+      {/* STUDENT DETAILS */}
 
-          <p className="mt-2 text-sm font-medium text-gray-900">
-            {profile.email ?? "—"}
-          </p>
-        </div>
+      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-950">
+          Student details
+        </h2>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-gray-500">
-            Start date
-          </p>
+        <p className="mt-1 text-sm text-gray-500">
+          Programme, timetable and overall supervision status.
+        </p>
 
-          <p className="mt-2 text-sm font-medium text-gray-900">
-            {student.start_date ?? "—"}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-gray-500">
-            Target completion
-          </p>
-
-          <p className="mt-2 text-sm font-medium text-gray-900">
-            {student.target_completion_date ?? "—"}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-gray-500">
-            Status
-          </p>
-
-          <p className="mt-2 text-sm font-medium text-gray-900">
-            {formatStatus(student.status)}
-          </p>
+        <div className="mt-6 max-w-3xl">
+          <StudentDetailsForm
+            student={student}
+            profile={profile}
+          />
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-950">
-            Submissions
-          </h2>
+      {/* MILESTONES */}
 
-          <p className="mt-2 text-sm text-gray-500">
-            Document submissions will be added in Stage 4D.
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <section className="grid gap-6 lg:grid-cols-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-3">
           <h2 className="text-lg font-semibold text-gray-950">
             Milestones
           </h2>
 
-          <p className="mt-2 text-sm text-gray-500">
-            Timetable management will be added in Stage 4C.
+          <p className="mt-1 text-sm text-gray-500">
+            Planned outputs, deadlines and progress.
           </p>
+
+          <div className="mt-6">
+            {milestones.length === 0 ? (
+              <p className="rounded-lg bg-gray-50 px-4 py-6 text-sm text-gray-500">
+                No milestones have been added.
+              </p>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {milestones.map(
+                  (milestone) => (
+                    <div
+                      key={milestone.id}
+                      className="py-5"
+                    >
+                      <div className="flex flex-col justify-between gap-4 sm:flex-row">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {milestone.title}
+                          </p>
+
+                          {milestone.description && (
+                            <p className="mt-1 text-sm text-gray-600">
+                              {
+                                milestone.description
+                              }
+                            </p>
+                          )}
+
+                          <p className="mt-2 text-sm text-gray-500">
+                            Target:{" "}
+                            {
+                              milestone.target_date
+                            }
+                          </p>
+                        </div>
+
+                        <span className="h-fit rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
+                          {formatMilestoneStatus(
+                            milestone.status
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {milestone.status !==
+                          "completed" && (
+                          <form
+                            action={
+                              updateMilestoneStatus
+                            }
+                          >
+                            <input
+                              type="hidden"
+                              name="milestone_id"
+                              value={
+                                milestone.id
+                              }
+                            />
+
+                            <input
+                              type="hidden"
+                              name="student_id"
+                              value={student.id}
+                            />
+
+                            <input
+                              type="hidden"
+                              name="status"
+                              value="completed"
+                            />
+
+                            <button
+                              type="submit"
+                              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                              Mark completed
+                            </button>
+                          </form>
+                        )}
+
+                        {milestone.status ===
+                          "planned" && (
+                          <form
+                            action={
+                              updateMilestoneStatus
+                            }
+                          >
+                            <input
+                              type="hidden"
+                              name="milestone_id"
+                              value={
+                                milestone.id
+                              }
+                            />
+
+                            <input
+                              type="hidden"
+                              name="student_id"
+                              value={student.id}
+                            />
+
+                            <input
+                              type="hidden"
+                              name="status"
+                              value="in_progress"
+                            />
+
+                            <button
+                              type="submit"
+                              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                              Start
+                            </button>
+                          </form>
+                        )}
+
+                        <form
+                          action={deleteMilestone}
+                        >
+                          <input
+                            type="hidden"
+                            name="milestone_id"
+                            value={milestone.id}
+                          />
+
+                          <input
+                            type="hidden"
+                            name="student_id"
+                            value={student.id}
+                          />
+
+                          <button
+                            type="submit"
+                            className="rounded-md px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                          >
+                            Delete
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
           <h2 className="text-lg font-semibold text-gray-950">
-            Meetings
+            Add milestone
           </h2>
 
-          <p className="mt-2 text-sm text-gray-500">
-            Supervision meetings will be added in Stage 4C.
-          </p>
+          <div className="mt-6">
+            <MilestoneForm
+              studentId={student.id}
+            />
+          </div>
         </div>
+      </section>
+
+      {/* MEETINGS */}
+
+      <section className="grid gap-6 lg:grid-cols-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-3">
+          <h2 className="text-lg font-semibold text-gray-950">
+            Supervision meetings
+          </h2>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Scheduled meetings and supervision notes.
+          </p>
+
+          <div className="mt-6">
+            {meetings.length === 0 ? (
+              <p className="rounded-lg bg-gray-50 px-4 py-6 text-sm text-gray-500">
+                No meetings have been recorded.
+              </p>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {meetings.map(
+                  (meeting) => (
+                    <div
+                      key={meeting.id}
+                      className="py-5"
+                    >
+                      <p className="font-medium text-gray-900">
+                        {formatMeetingDate(
+                          meeting.scheduled_at
+                        )}
+                      </p>
+
+                      {meeting.notes && (
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-600">
+                          {meeting.notes}
+                        </p>
+                      )}
+
+                      <form
+                        action={deleteMeeting}
+                        className="mt-3"
+                      >
+                        <input
+                          type="hidden"
+                          name="meeting_id"
+                          value={meeting.id}
+                        />
+
+                        <input
+                          type="hidden"
+                          name="student_id"
+                          value={student.id}
+                        />
+
+                        <button
+                          type="submit"
+                          className="text-xs font-medium text-red-700 hover:text-red-900"
+                        >
+                          Delete meeting
+                        </button>
+                      </form>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
+          <h2 className="text-lg font-semibold text-gray-950">
+            Add meeting
+          </h2>
+
+          <div className="mt-6">
+            <MeetingForm
+              studentId={student.id}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* SUBMISSIONS PLACEHOLDER */}
+
+      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-950">
+          Submissions and feedback
+        </h2>
+
+        <p className="mt-2 text-sm text-gray-500">
+          Private Word/PDF submissions and supervisor feedback
+          will be added in Stage 4D.
+        </p>
       </section>
     </div>
   );
