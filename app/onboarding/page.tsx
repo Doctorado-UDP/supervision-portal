@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
@@ -36,8 +38,15 @@ export default async function OnboardingPage() {
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-6">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-16 items-center justify-center rounded-md border border-dashed border-gray-300 bg-white text-sm text-gray-500">
-            University logo
+          <div className="mb-6 flex justify-center">
+            <Image
+            src="/branding/udp.png"
+            alt="Universidad Diego Portales"
+            width={267}
+            height={65}
+            priority
+            className="h-auto w-auto max-w-full"
+            />
           </div>
 
           <h1 className="text-2xl font-semibold text-gray-900">
