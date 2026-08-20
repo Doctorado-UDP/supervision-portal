@@ -1,47 +1,38 @@
 import Link from "next/link";
 
 import FeedbackForm from "@/components/admin/feedback-form";
-
 import SubmissionUploadForm from "@/components/submissions/submission-upload-form";
 
 import { formatPortalDateTime } from "@/lib/datetime/format";
-
-import {
-  createClient,
-} from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 type AdminSubmissionsSectionProps = {
   studentId: string;
 };
 
-function formatBytes(
-  bytes: number
-) {
+const SUPERVISOR_EMAIL =
+  "bastian.gonzalez.b@mail.udp.cl";
+
+function formatBytes(bytes: number) {
   if (bytes < 1024) {
     return `${bytes} B`;
   }
 
-  if (
-    bytes <
-    1024 * 1024
-  ) {
-    return `${(
-      bytes / 1024
-    ).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
   }
 
-  return `${(
-    bytes /
-    1024 /
-    1024
-  ).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 export default async function AdminSubmissionsSection({
   studentId,
 }: AdminSubmissionsSectionProps) {
-  const supabase =
-    await createClient();
+  const supabase = await createClient();
+
+  // ============================================================
+  // SUBMISSIONS
+  // ============================================================
 
   const {
     data: submissions,
@@ -49,28 +40,80 @@ export default async function AdminSubmissionsSection({
   } = await supabase
     .from("submissions")
     .select(
-      "id, title, version, file_name, file_size_bytes, submitted_at"
+      "id, title, version, file_name, file_size_bytes, submitted_at, uploaded_by"
     )
-    .eq(
-      "student_id",
-      studentId
-    )
-    .order(
-      "submitted_at",
-      {
-        ascending: false,
-      }
-    );
+    .eq("student_id", studentId)
+    .order("submitted_at", {
+      ascending: false,
+    });
 
   if (submissionsError) {
-    console.error(
-      submissionsError
-    );
+    console.error(submissionsError);
 
     throw new Error(
       "Unable to load submissions."
     );
   }
+
+  // ============================================================
+  // UPLOADER PROFILES
+  // ============================================================
+
+  const uploaderIds = [
+    ...new Set(
+      (submissions ?? []).map(
+        (submission) =>
+          submission.uploaded_by
+      )
+    ),
+  ];
+
+  let uploaderProfiles: {
+    id: string;
+    full_name: string;
+    email: string | null;
+    role: string;
+  }[] = [];
+
+  if (uploaderIds.length > 0) {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("profiles")
+      .select(
+        "id, full_name, email, role"
+      )
+      .in(
+        "id",
+        uploaderIds
+      );
+
+    if (error) {
+      console.error(error);
+
+      throw new Error(
+        "Unable to load submission uploader information."
+      );
+    }
+
+    uploaderProfiles =
+      data ?? [];
+  }
+
+  const uploaderMap =
+    new Map(
+      uploaderProfiles.map(
+        (profile) => [
+          profile.id,
+          profile,
+        ]
+      )
+    );
+
+  // ============================================================
+  // FEEDBACK
+  // ============================================================
 
   const submissionIds =
     (submissions ?? []).map(
@@ -78,17 +121,14 @@ export default async function AdminSubmissionsSection({
         submission.id
     );
 
-  let feedback:
-    {
-      id: string;
-      submission_id: string;
-      feedback_text: string;
-      created_at: string;
-    }[] = [];
+  let feedback: {
+    id: string;
+    submission_id: string;
+    feedback_text: string;
+    created_at: string;
+  }[] = [];
 
-  if (
-    submissionIds.length > 0
-  ) {
+  if (submissionIds.length > 0) {
     const {
       data,
       error,
@@ -141,6 +181,10 @@ export default async function AdminSubmissionsSection({
     );
   }
 
+  // ============================================================
+  // RENDER
+  // ============================================================
+
   return (
     <section className="grid gap-6 lg:grid-cols-5">
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-3">
@@ -154,11 +198,9 @@ export default async function AdminSubmissionsSection({
 
         <div className="mt-6">
           {!submissions ||
-          submissions.length ===
-            0 ? (
+          submissions.length === 0 ? (
             <p className="rounded-lg bg-gray-50 px-4 py-6 text-sm text-gray-500">
-              No submissions have
-              been uploaded.
+              No submissions have been uploaded.
             </p>
           ) : (
             <div className="space-y-6">
@@ -168,6 +210,21 @@ export default async function AdminSubmissionsSection({
                     feedbackMap.get(
                       submission.id
                     ) ?? [];
+
+                  const uploader =
+                    uploaderMap.get(
+                      submission.uploaded_by
+                    );
+
+                  const uploaderLabel =
+                    uploader?.email?.toLowerCase() ===
+                    SUPERVISOR_EMAIL.toLowerCase()
+                      ? "supervisor"
+                      : uploader?.role === "admin"
+                        ? "staff"
+                        : uploader?.role === "student"
+                          ? "student"
+                          : null;
 
                   return (
                     <article
@@ -211,6 +268,15 @@ export default async function AdminSubmissionsSection({
                               submission.submitted_at
                             )}
                           </p>
+
+                          <p className="mt-1 text-xs text-gray-500">
+                            Uploaded by{" "}
+                            {uploader?.full_name ??
+                              "Unknown user"}
+                            {uploaderLabel
+                              ? ` (${uploaderLabel})`
+                              : ""}
+                          </p>
                         </div>
 
                         <Link
@@ -229,8 +295,7 @@ export default async function AdminSubmissionsSection({
                         {items.length ===
                         0 ? (
                           <p className="mt-2 text-sm text-gray-500">
-                            No feedback
-                            posted yet.
+                            No feedback posted yet.
                           </p>
                         ) : (
                           <div className="mt-3 space-y-3">
@@ -251,11 +316,9 @@ export default async function AdminSubmissionsSection({
                                   </p>
 
                                   <p className="mt-2 text-xs text-gray-500">
-                                    {
-                                      formatPortalDateTime(
-                                        item.created_at
-                                      )
-                                    }
+                                    {formatPortalDateTime(
+                                      item.created_at
+                                    )}
                                   </p>
                                 </div>
                               )
@@ -283,20 +346,18 @@ export default async function AdminSubmissionsSection({
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
         <h2 className="text-lg font-semibold text-gray-950">
-          Upload submission
+          Upload on behalf of student
         </h2>
 
-        <p className="mt-1 text-sm text-gray-500">
-          You may also upload a
-          document on behalf of the
-          student.
+        <p className="mt-1 text-sm leading-6 text-gray-500">
+          Upload a PDF or Word document directly to this
+          student&apos;s submission record. The student will be
+          able to access the file through their portal.
         </p>
 
         <div className="mt-6">
           <SubmissionUploadForm
-            studentId={
-              studentId
-            }
+            studentId={studentId}
           />
         </div>
       </div>

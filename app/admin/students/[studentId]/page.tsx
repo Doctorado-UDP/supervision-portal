@@ -4,6 +4,8 @@ import { formatPortalDateTime } from "@/lib/datetime/format";
 
 import AdminSubmissionsSection from "@/components/admin/admin-submissions-section";
 
+import { SITE_CONFIG } from "@/lib/config/site";
+
 import MeetingForm from "@/components/admin/meeting-form";
 import MilestoneForm from "@/components/admin/milestone-form";
 import StudentDetailsForm from "@/components/admin/student-details-form";
@@ -429,6 +431,20 @@ export default async function StudentPage({
           <h2 className="text-lg font-semibold text-gray-950">
             Add meeting
           </h2>
+
+        <p className="mt-2 text-sm leading-6 text-gray-500">
+            Meetings are booked through SavvyCal. Add the confirmed meeting
+            here to maintain the supervision record.
+        </p>
+        
+        <a 
+           href={SITE_CONFIG.savvyCalUrl}
+           target="_blank"
+           rel="noopener noreferrer"
+           className="mt-3 inline-block text-sm font-medium text-gray-700 hover:text-gray-950"
+        >
+            Open SavvyCal ↗
+        </a>
 
           <div className="mt-6">
             <MeetingForm

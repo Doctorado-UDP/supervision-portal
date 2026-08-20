@@ -1,42 +1,27 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { formatPortalDateTime } from "@/lib/datetime/format";
-
+import SiteFooter from "@/components/shared/site-footer";
 import StudentHeader from "@/components/student/student-header";
-
 import SubmissionUploadForm from "@/components/submissions/submission-upload-form";
 
-import {
-  createClient,
-} from "@/lib/supabase/server";
+import { SITE_CONFIG } from "@/lib/config/site";
+import { formatPortalDateTime } from "@/lib/datetime/format";
+import { createClient } from "@/lib/supabase/server";
 
-function formatBytes(
-  bytes: number
-) {
+function formatBytes(bytes: number) {
   if (bytes < 1024) {
     return `${bytes} B`;
   }
 
-  if (
-    bytes <
-    1024 * 1024
-  ) {
-    return `${(
-      bytes / 1024
-    ).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
   }
 
-  return `${(
-    bytes /
-    1024 /
-    1024
-  ).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function formatStatus(
-  status: string
-) {
+function formatStatus(status: string) {
   switch (status) {
     case "on_track":
       return "On track";
@@ -56,13 +41,15 @@ function formatStatus(
 }
 
 export default async function StudentPage() {
-  const supabase =
-    await createClient();
+  const supabase = await createClient();
+
+  // ============================================================
+  // AUTHENTICATED USER
+  // ============================================================
 
   const {
     data: claimsData,
-  } =
-    await supabase.auth.getClaims();
+  } = await supabase.auth.getClaims();
 
   const userId =
     claimsData?.claims?.sub;
@@ -95,6 +82,10 @@ export default async function StudentPage() {
     redirect("/admin");
   }
 
+  // ============================================================
+  // STUDENT RECORD
+  // ============================================================
+
   const {
     data: student,
     error: studentError,
@@ -109,18 +100,24 @@ export default async function StudentPage() {
     )
     .maybeSingle();
 
-  // Account exists, but supervisor
+  if (studentError) {
+    throw new Error(
+      "Unable to load student record."
+    );
+  }
+
+  // Account exists, but supervisor/staff
   // has not created student record yet.
   if (!student) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="flex min-h-screen flex-col bg-gray-50">
         <StudentHeader
           fullName={
             profile.full_name
           }
         />
 
-        <main className="mx-auto max-w-4xl px-6 py-8">
+        <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-8">
           <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
             <h1 className="text-2xl font-semibold text-gray-950">
               Account setup in progress
@@ -134,15 +131,15 @@ export default async function StudentPage() {
             </p>
           </div>
         </main>
+
+        <SiteFooter />
       </div>
     );
   }
 
-  if (studentError) {
-    throw new Error(
-      "Unable to load student record."
-    );
-  }
+  // ============================================================
+  // SUPERVISION DATA
+  // ============================================================
 
   const [
     submissionsResult,
@@ -152,7 +149,7 @@ export default async function StudentPage() {
     supabase
       .from("submissions")
       .select(
-        "id, title, version, file_name, file_size_bytes, submitted_at"
+        "id, title, version, file_name, file_size_bytes, submitted_at, uploaded_by"
       )
       .eq(
         "student_id",
@@ -217,19 +214,22 @@ export default async function StudentPage() {
   const submissions =
     submissionsResult.data ?? [];
 
+  // ============================================================
+  // FEEDBACK
+  // ============================================================
+
   const submissionIds =
     submissions.map(
       (submission) =>
         submission.id
     );
 
-  let feedback:
-    {
-      id: string;
-      submission_id: string;
-      feedback_text: string;
-      created_at: string;
-    }[] = [];
+  let feedback: {
+    id: string;
+    submission_id: string;
+    feedback_text: string;
+    created_at: string;
+  }[] = [];
 
   if (
     submissionIds.length > 0
@@ -284,15 +284,21 @@ export default async function StudentPage() {
     );
   }
 
+  // ============================================================
+  // RENDER
+  // ============================================================
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-gray-50">
       <StudentHeader
         fullName={
           profile.full_name
         }
       />
 
-      <main className="mx-auto max-w-7xl space-y-8 px-6 py-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-6 py-8">
+        {/* STUDENT OVERVIEW */}
+
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-gray-950">
             {profile.full_name}
@@ -308,6 +314,8 @@ export default async function StudentPage() {
             )}
           </span>
         </div>
+
+        {/* SUBMISSIONS */}
 
         <section className="grid gap-6 lg:grid-cols-3">
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
@@ -329,6 +337,10 @@ export default async function StudentPage() {
                       feedbackMap.get(
                         submission.id
                       ) ?? [];
+
+                    const uploadedByStudent =
+                      submission.uploaded_by ===
+                      userId;
 
                     return (
                       <article
@@ -364,9 +376,16 @@ export default async function StudentPage() {
                             </p>
 
                             <p className="mt-1 text-xs text-gray-500">
+                              Uploaded{" "}
                               {formatPortalDateTime(
                                 submission.submitted_at
                               )}
+                            </p>
+
+                            <p className="mt-1 text-xs text-gray-500">
+                              {uploadedByStudent
+                                ? "Uploaded by you"
+                                : "Uploaded by staff"}
                             </p>
                           </div>
 
@@ -380,17 +399,14 @@ export default async function StudentPage() {
 
                         <div className="mt-5 border-t border-gray-100 pt-5">
                           <h4 className="text-sm font-semibold text-gray-900">
-                            Supervisor
-                            feedback
+                            Feedback
                           </h4>
 
                           {items.length ===
                           0 ? (
                             <p className="mt-2 text-sm text-gray-500">
-                              No
-                              feedback
-                              posted
-                              yet.
+                              No feedback
+                              posted yet.
                             </p>
                           ) : (
                             <div className="mt-3 space-y-3">
@@ -429,10 +445,16 @@ export default async function StudentPage() {
             </div>
           </div>
 
+          {/* UPLOAD */}
+
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-950">
               Upload submission
             </h2>
+
+            <p className="mt-1 text-sm leading-6 text-gray-500">
+              Upload a PDF or Word document to your supervision record.
+            </p>
 
             <div className="mt-6">
               <SubmissionUploadForm
@@ -444,7 +466,11 @@ export default async function StudentPage() {
           </div>
         </section>
 
+        {/* MILESTONES + MEETINGS */}
+
         <section className="grid gap-6 lg:grid-cols-2">
+          {/* MILESTONES */}
+
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-950">
               Milestones
@@ -493,10 +519,31 @@ export default async function StudentPage() {
             </div>
           </div>
 
+          {/* MEETINGS */}
+
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-950">
               Supervision meetings
             </h2>
+
+            <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <p className="text-sm leading-6 text-gray-700">
+                Use SavvyCal to book a supervision meeting.
+                Confirmed meetings will subsequently appear in
+                this portal as part of your supervision record.
+              </p>
+
+              <a
+                href={
+                  SITE_CONFIG.savvyCalUrl
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+              >
+                Book a supervision meeting
+              </a>
+            </div>
 
             <div className="mt-5 space-y-4">
               {(
@@ -539,6 +586,8 @@ export default async function StudentPage() {
           </div>
         </section>
       </main>
+
+      <SiteFooter />
     </div>
   );
 }
