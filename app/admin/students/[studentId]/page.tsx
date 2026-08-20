@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import AdminSubmissionsSection from "@/components/admin/admin-submissions-section";
+
 import MeetingForm from "@/components/admin/meeting-form";
 import MilestoneForm from "@/components/admin/milestone-form";
 import StudentDetailsForm from "@/components/admin/student-details-form";
@@ -445,16 +447,9 @@ export default async function StudentPage({
 
       {/* SUBMISSIONS PLACEHOLDER */}
 
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-950">
-          Submissions and feedback
-        </h2>
-
-        <p className="mt-2 text-sm text-gray-500">
-          Private Word/PDF submissions and supervisor feedback
-          will be added in Stage 4D.
-        </p>
-      </section>
+      <AdminSubmissionsSection
+      studentId={student.id}
+      />
     </div>
   );
 }
