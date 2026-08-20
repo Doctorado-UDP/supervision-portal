@@ -32,13 +32,6 @@ export default function AdminHeader({
 
           <nav className="hidden items-center gap-6 md:flex">
             <Link
-              href="/admin"
-              className="text-sm font-medium text-gray-700 hover:text-gray-950"
-            >
-              Dashboard
-            </Link>
-
-            <Link
               href="/admin/students"
               className="text-sm font-medium text-gray-700 hover:text-gray-950"
             >

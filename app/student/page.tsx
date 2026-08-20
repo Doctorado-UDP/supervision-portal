@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { formatPortalDateTime } from "@/lib/datetime/format";
+
 import StudentHeader from "@/components/student/student-header";
 
 import SubmissionUploadForm from "@/components/submissions/submission-upload-form";
@@ -30,22 +32,6 @@ function formatBytes(
     1024 /
     1024
   ).toFixed(1)} MB`;
-}
-
-function formatDate(
-  value: string
-) {
-  return new Intl.DateTimeFormat(
-    "en-GB",
-    {
-      dateStyle: "medium",
-      timeStyle: "short",
-      timeZone:
-        "Europe/Amsterdam",
-    }
-  ).format(
-    new Date(value)
-  );
 }
 
 function formatStatus(
@@ -378,7 +364,7 @@ export default async function StudentPage() {
                             </p>
 
                             <p className="mt-1 text-xs text-gray-500">
-                              {formatDate(
+                              {formatPortalDateTime(
                                 submission.submitted_at
                               )}
                             </p>
@@ -425,7 +411,7 @@ export default async function StudentPage() {
                                     </p>
 
                                     <p className="mt-2 text-xs text-gray-500">
-                                      {formatDate(
+                                      {formatPortalDateTime(
                                         item.created_at
                                       )}
                                     </p>
@@ -533,7 +519,7 @@ export default async function StudentPage() {
                       className="border-b border-gray-100 pb-4 last:border-0"
                     >
                       <p className="font-medium text-gray-900">
-                        {formatDate(
+                        {formatPortalDateTime(
                           meeting.scheduled_at
                         )}
                       </p>

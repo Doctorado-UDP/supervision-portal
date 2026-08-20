@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { formatPortalDateTime } from "@/lib/datetime/format";
 
 import AdminSubmissionsSection from "@/components/admin/admin-submissions-section";
 
@@ -46,14 +47,6 @@ function formatMilestoneStatus(status: string) {
     default:
       return "Planned";
   }
-}
-
-function formatMeetingDate(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Europe/Amsterdam",
-  }).format(new Date(value));
 }
 
 export default async function StudentPage({
@@ -390,8 +383,8 @@ export default async function StudentPage({
                       className="py-5"
                     >
                       <p className="font-medium text-gray-900">
-                        {formatMeetingDate(
-                          meeting.scheduled_at
+                        {formatPortalDateTime(
+                            meeting.scheduled_at
                         )}
                       </p>
 

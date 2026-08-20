@@ -4,6 +4,8 @@ import FeedbackForm from "@/components/admin/feedback-form";
 
 import SubmissionUploadForm from "@/components/submissions/submission-upload-form";
 
+import { formatPortalDateTime } from "@/lib/datetime/format";
+
 import {
   createClient,
 } from "@/lib/supabase/server";
@@ -33,22 +35,6 @@ function formatBytes(
     1024 /
     1024
   ).toFixed(1)} MB`;
-}
-
-function formatDate(
-  value: string
-) {
-  return new Intl.DateTimeFormat(
-    "en-GB",
-    {
-      dateStyle: "medium",
-      timeStyle: "short",
-      timeZone:
-        "Europe/Amsterdam",
-    }
-  ).format(
-    new Date(value)
-  );
 }
 
 export default async function AdminSubmissionsSection({
@@ -221,7 +207,7 @@ export default async function AdminSubmissionsSection({
 
                           <p className="mt-1 text-xs text-gray-500">
                             Uploaded{" "}
-                            {formatDate(
+                            {formatPortalDateTime(
                               submission.submitted_at
                             )}
                           </p>
@@ -266,7 +252,7 @@ export default async function AdminSubmissionsSection({
 
                                   <p className="mt-2 text-xs text-gray-500">
                                     {
-                                      formatDate(
+                                      formatPortalDateTime(
                                         item.created_at
                                       )
                                     }
