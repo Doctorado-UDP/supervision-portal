@@ -6,310 +6,397 @@ import {
   useState,
 } from "react";
 
-import { useRouter } from "next/navigation";
+import {
+  useRouter,
+} from "next/navigation";
 
-import { createClient } from "@/lib/supabase/client";
-
-const MAX_FILE_SIZE_BYTES =
-  25 * 1024 * 1024;
-
-const ALLOWED_EXTENSIONS = [
-  "pdf",
-  "doc",
-  "docx",
-];
+import {
+  createClient,
+} from "@/lib/supabase/client";
 
 type SubmissionUploadFormProps = {
-  studentId: string;
+  caseId: string;
 };
 
-function getExtension(fileName: string) {
-  return (
+const MAX_FILE_SIZE =
+  25 * 1024 * 1024;
+
+const ALLOWED_EXTENSIONS =
+  new Set([
+    "pdf",
+    "doc",
+    "docx",
+  ]);
+
+function getExtension(
+  fileName: string
+) {
+  const parts =
     fileName
-      .split(".")
-      .pop()
-      ?.toLowerCase() ?? ""
+      .toLowerCase()
+      .split(".");
+
+  if (parts.length < 2) {
+    return "";
+  }
+
+  return (
+    parts.at(-1) ?? ""
   );
 }
 
 function sanitiseFileName(
   fileName: string
 ) {
-  const extension =
-    getExtension(fileName);
-
-  const baseName =
-    fileName
-      .replace(/\.[^/.]+$/, "")
-      .normalize("NFKD")
-      .replace(
-        /[^a-zA-Z0-9_-]+/g,
-        "_"
-      )
-      .replace(/^_+|_+$/g, "")
-      .slice(0, 100) ||
-    "document";
-
-  return `${baseName}.${extension}`;
+  return fileName
+    .trim()
+    .replace(
+      /[^a-zA-Z0-9._-]+/g,
+      "_"
+    )
+    .replace(
+      /^_+|_+$/g,
+      ""
+    );
 }
 
 export default function SubmissionUploadForm({
-  studentId,
+  caseId,
 }: SubmissionUploadFormProps) {
-  const router = useRouter();
+  const router =
+    useRouter();
 
   const fileInputRef =
-    useRef<HTMLInputElement>(null);
-
-  const [title, setTitle] =
-    useState("");
-
-  const [file, setFile] =
-    useState<File | null>(null);
-
-  const [errorMessage, setErrorMessage] =
-    useState<string | null>(null);
+    useRef<HTMLInputElement>(
+      null
+    );
 
   const [
-    successMessage,
-    setSuccessMessage,
-  ] = useState<string | null>(null);
+    title,
+    setTitle,
+  ] = useState("");
 
-  const [isUploading, setIsUploading] =
-    useState(false);
+  const [
+    error,
+    setError,
+  ] = useState<
+    string | null
+  >(null);
+
+  const [
+    success,
+    setSuccess,
+  ] = useState<
+    string | null
+  >(null);
+
+  const [
+    uploading,
+    setUploading,
+  ] = useState(false);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
-    setErrorMessage(null);
-    setSuccessMessage(null);
+    setError(null);
+    setSuccess(null);
 
     const cleanTitle =
       title.trim();
 
+    const file =
+      fileInputRef.current
+        ?.files?.[0];
+
+    // ==========================================================
+    // VALIDATION
+    // ==========================================================
+
     if (!cleanTitle) {
-      setErrorMessage(
-        "Please enter a submission title."
+      setError(
+        "Enter a submission title."
       );
+
       return;
     }
 
     if (!file) {
-      setErrorMessage(
-        "Please select a file."
+      setError(
+        "Select a PDF or Word document."
       );
-      return;
-    }
 
-    const extension =
-      getExtension(file.name);
-
-    if (
-      !ALLOWED_EXTENSIONS.includes(
-        extension
-      )
-    ) {
-      setErrorMessage(
-        "Only PDF, DOC and DOCX files are allowed."
-      );
       return;
     }
 
     if (
       file.size >
-      MAX_FILE_SIZE_BYTES
+      MAX_FILE_SIZE
     ) {
-      setErrorMessage(
-        "The file exceeds the 25 MB upload limit."
+      setError(
+        "The file must be 25 MB or smaller."
       );
+
       return;
     }
 
-    setIsUploading(true);
+    const extension =
+      getExtension(
+        file.name
+      );
+
+    if (
+      !ALLOWED_EXTENSIONS.has(
+        extension
+      )
+    ) {
+      setError(
+        "Only PDF, DOC and DOCX files are allowed."
+      );
+
+      return;
+    }
+
+    setUploading(true);
 
     const supabase =
       createClient();
 
-    // --------------------------------------------------------
-    // 1. Identify authenticated uploader
-    // --------------------------------------------------------
+    try {
+      // ========================================================
+      // CURRENT USER
+      // ========================================================
 
-    const {
-      data: userData,
-      error: userError,
-    } =
-      await supabase.auth.getUser();
+      const {
+        data: userData,
+        error: userError,
+      } =
+        await supabase.auth.getUser();
 
-    if (
-      userError ||
-      !userData.user
-    ) {
-      setErrorMessage(
-        "Your session could not be verified. Please sign in again."
-      );
-      setIsUploading(false);
-      return;
-    }
+      if (
+        userError ||
+        !userData.user
+      ) {
+        throw new Error(
+          "Your session could not be verified."
+        );
+      }
 
-    // --------------------------------------------------------
-    // 2. Determine next version number
-    // --------------------------------------------------------
+      const userId =
+        userData.user.id;
 
-    const {
-      data: versions,
-      error: versionError,
-    } = await supabase
-      .from("submissions")
-      .select("version")
-      .eq(
-        "student_id",
-        studentId
-      )
-      .eq("title", cleanTitle)
-      .order("version", {
-        ascending: false,
-      })
-      .limit(1);
+      // ========================================================
+      // NEXT CASE-LEVEL VERSION
+      // ========================================================
 
-    if (versionError) {
-      console.error(versionError);
-
-      setErrorMessage(
-        "Unable to determine the submission version."
-      );
-
-      setIsUploading(false);
-      return;
-    }
-
-    const nextVersion =
-      (versions?.[0]?.version ??
-        0) + 1;
-
-    // --------------------------------------------------------
-    // 3. Generate permanent IDs / private Storage path
-    // --------------------------------------------------------
-
-    const submissionId =
-      crypto.randomUUID();
-
-    const safeFileName =
-      sanitiseFileName(
-        file.name
-      );
-
-    const filePath =
-      `${studentId}/${submissionId}/${safeFileName}`;
-
-    // --------------------------------------------------------
-    // 4. Upload directly to private Supabase Storage
-    // --------------------------------------------------------
-
-    const uploadOptions = {
-      cacheControl: "3600",
-      upsert: false,
-      ...(file.type
-        ? {
-            contentType:
-              file.type,
-          }
-        : {}),
-    };
-
-    const {
-      error: uploadError,
-    } = await supabase.storage
-      .from("submissions")
-      .upload(
-        filePath,
-        file,
-        uploadOptions
-      );
-
-    if (uploadError) {
-      console.error(uploadError);
-
-      setErrorMessage(
-        `Upload failed: ${uploadError.message}`
-      );
-
-      setIsUploading(false);
-      return;
-    }
-
-    // --------------------------------------------------------
-    // 5. Register metadata in PostgreSQL
-    // --------------------------------------------------------
-
-    const {
-      error: metadataError,
-    } = await supabase
-      .from("submissions")
-      .insert({
-        id: submissionId,
-        student_id:
-          studentId,
-        title: cleanTitle,
-        version: nextVersion,
-        file_name:
-          file.name,
-        file_path:
-          filePath,
-        file_type:
-          file.type || null,
-        file_size_bytes:
-          file.size,
-        uploaded_by:
-          userData.user.id,
-      });
-
-    if (metadataError) {
-      console.error(
-        metadataError
-      );
-
-      // Avoid leaving an orphaned file
-      // if the database insert failed.
-      await supabase.storage
+      const {
+        data: previousVersions,
+        error:
+          versionError,
+      } = await supabase
         .from("submissions")
-        .remove([filePath]);
+        .select("version")
+        .eq(
+          "case_id",
+          caseId
+        )
+        .eq(
+          "title",
+          cleanTitle
+        )
+        .order(
+          "version",
+          {
+            ascending: false,
+          }
+        )
+        .limit(1);
 
-      setErrorMessage(
-        "The file was uploaded but the submission record could not be created. The uploaded file has been removed."
+      if (versionError) {
+        console.error(
+          versionError
+        );
+
+        throw new Error(
+          "Unable to determine the next submission version."
+        );
+      }
+
+      const previousVersion =
+        previousVersions?.[0]
+          ?.version ?? 0;
+
+      const nextVersion =
+        previousVersion + 1;
+
+      // ========================================================
+      // CASE-BASED STORAGE PATH
+      // ========================================================
+
+      const submissionId =
+        crypto.randomUUID();
+
+      const safeFileName =
+        sanitiseFileName(
+          file.name
+        ) ||
+        `submission.${extension}`;
+
+      const filePath =
+        `${caseId}/${submissionId}/${safeFileName}`;
+
+      // ========================================================
+      // UPLOAD FILE
+      // ========================================================
+
+      const {
+        error: uploadError,
+      } =
+        await supabase.storage
+          .from(
+            "submissions"
+          )
+          .upload(
+            filePath,
+            file,
+            {
+              cacheControl:
+                "3600",
+              upsert: false,
+            }
+          );
+
+      if (uploadError) {
+        console.error(
+          uploadError
+        );
+
+        throw new Error(
+          uploadError.message ||
+            "Unable to upload the file."
+        );
+      }
+
+      // ========================================================
+      // CREATE CASE-LEVEL METADATA
+      // ========================================================
+      //
+      // student_id is intentionally NULL.
+      //
+      // uploaded_by records the actual user who uploaded it.
+      // ========================================================
+
+      const {
+        error: metadataError,
+      } = await supabase
+        .from("submissions")
+        .insert({
+          id:
+            submissionId,
+
+          case_id:
+            caseId,
+
+          student_id:
+            null,
+
+          title:
+            cleanTitle,
+
+          version:
+            nextVersion,
+
+          file_name:
+            file.name,
+
+          file_path:
+            filePath,
+
+          file_type:
+            file.type ||
+            extension,
+
+          file_size_bytes:
+            file.size,
+
+          uploaded_by:
+            userId,
+
+          submitted_at:
+            new Date().toISOString(),
+        });
+
+      // ========================================================
+      // REMOVE ORPHAN FILE IF DATABASE INSERT FAILS
+      // ========================================================
+
+      if (metadataError) {
+        console.error(
+          metadataError
+        );
+
+        await supabase.storage
+          .from(
+            "submissions"
+          )
+          .remove([
+            filePath,
+          ]);
+
+        throw new Error(
+          metadataError.message ||
+            "The file was uploaded, but the submission record could not be created."
+        );
+      }
+
+      // ========================================================
+      // SUCCESS
+      // ========================================================
+
+      setTitle("");
+
+      if (
+        fileInputRef.current
+      ) {
+        fileInputRef.current.value =
+          "";
+      }
+
+      setSuccess(
+        `Submission uploaded as Version ${nextVersion}.`
       );
 
-      setIsUploading(false);
-      return;
+      router.refresh();
+    } catch (
+      uploadFailure
+    ) {
+      console.error(
+        uploadFailure
+      );
+
+      setError(
+        uploadFailure instanceof
+          Error
+          ? uploadFailure.message
+          : "Unable to upload submission."
+      );
+    } finally {
+      setUploading(false);
     }
-
-    setTitle("");
-    setFile(null);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value =
-        "";
-    }
-
-    setSuccessMessage(
-      `Submission uploaded as version ${nextVersion}.`
-    );
-
-    setIsUploading(false);
-
-    router.refresh();
   }
 
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={
+        handleSubmit
+      }
       className="space-y-5"
     >
       <div>
         <label
           htmlFor="submission-title"
-          className="mb-2 block text-sm font-medium text-gray-700"
+          className="block text-sm font-medium text-gray-900"
         >
           Submission title
         </label>
@@ -317,75 +404,73 @@ export default function SubmissionUploadForm({
         <input
           id="submission-title"
           type="text"
-          required
           value={title}
-          onChange={(event) =>
+          onChange={(
+            event
+          ) =>
             setTitle(
               event.target.value
             )
           }
+          required
           placeholder="e.g. Methods chapter"
-          className="w-full rounded-md border border-gray-300 px-3 py-2"
+          className="mt-2 w-full rounded-md border bg-white px-3 py-2 text-sm"
         />
 
-        <p className="mt-2 text-xs text-gray-500">
-          Reusing the same title
-          automatically creates the
-          next version.
+        <p className="mt-1 text-xs leading-5 text-gray-500">
+          Uploading the same
+          title again creates the
+          next version within this
+          supervision.
         </p>
       </div>
 
       <div>
         <label
           htmlFor="submission-file"
-          className="mb-2 block text-sm font-medium text-gray-700"
+          className="block text-sm font-medium text-gray-900"
         >
           File
         </label>
 
         <input
-          ref={fileInputRef}
+          ref={
+            fileInputRef
+          }
           id="submission-file"
           type="file"
-          required
           accept=".pdf,.doc,.docx"
-          onChange={(event) =>
-            setFile(
-              event.target
-                .files?.[0] ??
-                null
-            )
-          }
-          className="block w-full text-sm text-gray-700"
+          required
+          className="mt-2 block w-full text-sm text-gray-700"
         />
 
-        <p className="mt-2 text-xs text-gray-500">
-          PDF, DOC or DOCX. Maximum
-          file size: 25 MB.
+        <p className="mt-1 text-xs leading-5 text-gray-500">
+          PDF, DOC or DOCX.
+          Maximum file size:
+          25 MB.
         </p>
       </div>
 
-      {errorMessage && (
-        <p
-          role="alert"
-          className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700"
-        >
-          {errorMessage}
+      {error && (
+        <p className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
         </p>
       )}
 
-      {successMessage && (
-        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-          {successMessage}
+      {success && (
+        <p className="rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
+          {success}
         </p>
       )}
 
       <button
         type="submit"
-        disabled={isUploading}
-        className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={
+          uploading
+        }
+        className="w-full rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isUploading
+        {uploading
           ? "Uploading..."
           : "Upload submission"}
       </button>

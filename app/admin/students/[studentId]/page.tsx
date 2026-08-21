@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { formatPortalDateTime } from "@/lib/datetime/format";
 
 import AdminSubmissionsSection from "@/components/admin/admin-submissions-section";
-
-import { SITE_CONFIG } from "@/lib/config/site";
-
 import MeetingForm from "@/components/admin/meeting-form";
 import MilestoneForm from "@/components/admin/milestone-form";
 import StudentDetailsForm from "@/components/admin/student-details-form";
+
+import { SITE_CONFIG } from "@/lib/config/site";
+import { formatPortalDateTime } from "@/lib/datetime/format";
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -23,29 +22,40 @@ type StudentPageProps = {
   }>;
 };
 
-function formatStudentStatus(status: string) {
+function formatStudentStatus(
+  status: string
+) {
   switch (status) {
     case "on_track":
       return "On track";
+
     case "attention":
       return "Needs attention";
+
     case "completed":
       return "Completed";
+
     case "inactive":
       return "Inactive";
+
     default:
       return "Active";
   }
 }
 
-function formatMilestoneStatus(status: string) {
+function formatMilestoneStatus(
+  status: string
+) {
   switch (status) {
     case "in_progress":
       return "In progress";
+
     case "completed":
       return "Completed";
+
     case "cancelled":
       return "Cancelled";
+
     default:
       return "Planned";
   }
@@ -54,21 +64,98 @@ function formatMilestoneStatus(status: string) {
 export default async function StudentPage({
   params,
 }: StudentPageProps) {
-  const { studentId } = await params;
+  const {
+    studentId,
+  } = await params;
 
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
+
+  // ============================================================
+  // STUDENT RECORD
+  // ============================================================
+
+  const {
+    data: student,
+    error: studentError,
+  } = await supabase
+    .from("students")
+    .select(
+      "id, user_id, programme, start_date, target_completion_date, status"
+    )
+    .eq(
+      "id",
+      studentId
+    )
+    .maybeSingle();
+
+  if (
+    studentError ||
+    !student
+  ) {
+    notFound();
+  }
+
+  // ============================================================
+  // SUPERVISION CASE
+  // ============================================================
+  //
+  // The route remains student-based for now:
+  //
+  // /admin/students/[studentId]
+  //
+  // But supervision content is now loaded through the student's
+  // current case:
+  //
+  // studentId -> case_members -> caseId
+  // ============================================================
+
+  const {
+    data: caseMembership,
+    error: caseMembershipError,
+  } = await supabase
+    .from("case_members")
+    .select("case_id")
+    .eq(
+      "student_id",
+      studentId
+    )
+    .single();
+
+  if (
+    caseMembershipError ||
+    !caseMembership
+  ) {
+    console.error(
+      caseMembershipError
+    );
+
+    throw new Error(
+      "Unable to load supervision case."
+    );
+  }
+
+  const caseId =
+    caseMembership.case_id;
+
+  // ============================================================
+  // PROFILE + SHARED SUPERVISION DATA
+  // ============================================================
 
   const [
-    studentResult,
+    profileResult,
     milestonesResult,
     meetingsResult,
   ] = await Promise.all([
     supabase
-      .from("students")
+      .from("profiles")
       .select(
-        "id, user_id, programme, start_date, target_completion_date, status"
+        "full_name, email"
       )
-      .eq("id", studentId)
+      .eq(
+        "id",
+        student.user_id
+      )
       .single(),
 
     supabase
@@ -76,27 +163,45 @@ export default async function StudentPage({
       .select(
         "id, title, description, target_date, status, completed_at"
       )
-      .eq("student_id", studentId)
-      .order("target_date", {
-        ascending: true,
-      }),
+      .eq(
+        "case_id",
+        caseId
+      )
+      .order(
+        "target_date",
+        {
+          ascending: true,
+        }
+      ),
 
     supabase
       .from("meetings")
       .select(
         "id, scheduled_at, notes"
       )
-      .eq("student_id", studentId)
-      .order("scheduled_at", {
-        ascending: false,
-      }),
+      .eq(
+        "case_id",
+        caseId
+      )
+      .order(
+        "scheduled_at",
+        {
+          ascending: false,
+        }
+      ),
   ]);
 
   if (
-    studentResult.error ||
-    !studentResult.data
+    profileResult.error ||
+    !profileResult.data
   ) {
-    notFound();
+    console.error(
+      profileResult.error
+    );
+
+    throw new Error(
+      "Unable to load the student's profile."
+    );
   }
 
   if (
@@ -113,22 +218,8 @@ export default async function StudentPage({
     );
   }
 
-  const student = studentResult.data;
-
-  const {
-    data: profile,
-    error: profileError,
-  } = await supabase
-    .from("profiles")
-    .select("full_name, email")
-    .eq("id", student.user_id)
-    .single();
-
-  if (profileError || !profile) {
-    throw new Error(
-      "Unable to load the student's profile."
-    );
-  }
+  const profile =
+    profileResult.data;
 
   const milestones =
     milestonesResult.data ?? [];
@@ -136,8 +227,14 @@ export default async function StudentPage({
   const meetings =
     meetingsResult.data ?? [];
 
+  // ============================================================
+  // RENDER
+  // ============================================================
+
   return (
     <div className="space-y-8">
+      {/* PAGE HEADER */}
+
       <div>
         <Link
           href="/admin/students"
@@ -177,13 +274,18 @@ export default async function StudentPage({
         </h2>
 
         <p className="mt-1 text-sm text-gray-500">
-          Programme, timetable and overall supervision status.
+          Programme, timetable and
+          overall supervision status.
         </p>
 
         <div className="mt-6 max-w-3xl">
           <StudentDetailsForm
-            student={student}
-            profile={profile}
+            student={
+              student
+            }
+            profile={
+              profile
+            }
           />
         </div>
       </section>
@@ -197,30 +299,40 @@ export default async function StudentPage({
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Planned outputs, deadlines and progress.
+            Shared planned outputs,
+            deadlines and progress
+            for this supervision.
           </p>
 
           <div className="mt-6">
-            {milestones.length === 0 ? (
+            {milestones.length ===
+            0 ? (
               <p className="rounded-lg bg-gray-50 px-4 py-6 text-sm text-gray-500">
-                No milestones have been added.
+                No milestones have
+                been added.
               </p>
             ) : (
               <div className="divide-y divide-gray-100">
                 {milestones.map(
-                  (milestone) => (
+                  (
+                    milestone
+                  ) => (
                     <div
-                      key={milestone.id}
+                      key={
+                        milestone.id
+                      }
                       className="py-5"
                     >
                       <div className="flex flex-col justify-between gap-4 sm:flex-row">
                         <div>
                           <p className="font-medium text-gray-900">
-                            {milestone.title}
+                            {
+                              milestone.title
+                            }
                           </p>
 
                           {milestone.description && (
-                            <p className="mt-1 text-sm text-gray-600">
+                            <p className="mt-1 whitespace-pre-wrap text-sm text-gray-600">
                               {
                                 milestone.description
                               }
@@ -261,7 +373,9 @@ export default async function StudentPage({
                             <input
                               type="hidden"
                               name="student_id"
-                              value={student.id}
+                              value={
+                                student.id
+                              }
                             />
 
                             <input
@@ -297,7 +411,9 @@ export default async function StudentPage({
                             <input
                               type="hidden"
                               name="student_id"
-                              value={student.id}
+                              value={
+                                student.id
+                              }
                             />
 
                             <input
@@ -316,18 +432,24 @@ export default async function StudentPage({
                         )}
 
                         <form
-                          action={deleteMilestone}
+                          action={
+                            deleteMilestone
+                          }
                         >
                           <input
                             type="hidden"
                             name="milestone_id"
-                            value={milestone.id}
+                            value={
+                              milestone.id
+                            }
                           />
 
                           <input
                             type="hidden"
                             name="student_id"
-                            value={student.id}
+                            value={
+                              student.id
+                            }
                           />
 
                           <button
@@ -346,14 +468,24 @@ export default async function StudentPage({
           </div>
         </div>
 
+        {/* ADD MILESTONE */}
+
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
           <h2 className="text-lg font-semibold text-gray-950">
             Add milestone
           </h2>
 
+          <p className="mt-1 text-sm leading-6 text-gray-500">
+            The milestone will be
+            shared by all students in
+            this supervision case.
+          </p>
+
           <div className="mt-6">
             <MilestoneForm
-              studentId={student.id}
+              studentId={
+                student.id
+              }
             />
           </div>
         </div>
@@ -368,48 +500,64 @@ export default async function StudentPage({
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Scheduled meetings and supervision notes.
+            Shared meetings and
+            supervision notes for
+            this supervision case.
           </p>
 
           <div className="mt-6">
-            {meetings.length === 0 ? (
+            {meetings.length ===
+            0 ? (
               <p className="rounded-lg bg-gray-50 px-4 py-6 text-sm text-gray-500">
-                No meetings have been recorded.
+                No meetings have been
+                recorded.
               </p>
             ) : (
               <div className="divide-y divide-gray-100">
                 {meetings.map(
-                  (meeting) => (
+                  (
+                    meeting
+                  ) => (
                     <div
-                      key={meeting.id}
+                      key={
+                        meeting.id
+                      }
                       className="py-5"
                     >
                       <p className="font-medium text-gray-900">
                         {formatPortalDateTime(
-                            meeting.scheduled_at
+                          meeting.scheduled_at
                         )}
                       </p>
 
                       {meeting.notes && (
                         <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-600">
-                          {meeting.notes}
+                          {
+                            meeting.notes
+                          }
                         </p>
                       )}
 
                       <form
-                        action={deleteMeeting}
+                        action={
+                          deleteMeeting
+                        }
                         className="mt-3"
                       >
                         <input
                           type="hidden"
                           name="meeting_id"
-                          value={meeting.id}
+                          value={
+                            meeting.id
+                          }
                         />
 
                         <input
                           type="hidden"
                           name="student_id"
-                          value={student.id}
+                          value={
+                            student.id
+                          }
                         />
 
                         <button
@@ -427,37 +575,48 @@ export default async function StudentPage({
           </div>
         </div>
 
+        {/* ADD MEETING */}
+
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
           <h2 className="text-lg font-semibold text-gray-950">
             Add meeting
           </h2>
 
-        <p className="mt-2 text-sm leading-6 text-gray-500">
-            Meetings are booked through SavvyCal. Add the confirmed meeting
-            here to maintain the supervision record.
-        </p>
-        
-        <a 
-           href={SITE_CONFIG.savvyCalUrl}
-           target="_blank"
-           rel="noopener noreferrer"
-           className="mt-3 inline-block text-sm font-medium text-gray-700 hover:text-gray-950"
-        >
+          <p className="mt-2 text-sm leading-6 text-gray-500">
+            Meetings are booked
+            through SavvyCal. Add the
+            confirmed meeting here
+            to maintain the shared
+            supervision record.
+          </p>
+
+          <a
+            href={
+              SITE_CONFIG.savvyCalUrl
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-block text-sm font-medium text-gray-700 hover:text-gray-950"
+          >
             Open SavvyCal ↗
-        </a>
+          </a>
 
           <div className="mt-6">
             <MeetingForm
-              studentId={student.id}
+              studentId={
+                student.id
+              }
             />
           </div>
         </div>
       </section>
 
-      {/* SUBMISSIONS PLACEHOLDER */}
+      {/* SHARED SUBMISSIONS */}
 
       <AdminSubmissionsSection
-      studentId={student.id}
+        studentId={
+          student.id
+        }
       />
     </div>
   );

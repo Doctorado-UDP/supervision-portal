@@ -39,6 +39,13 @@ export default function AdminHeader({
             </Link>
 
             <Link
+              href="/admin/supervisions"
+              className="text-sm font-medium text-gray-600 hover:text-gray-950"
+            >
+              Supervisions
+            </Link>
+
+            <Link
               href="/admin/timetable"
               className="text-sm font-medium text-gray-700 hover:text-gray-950"
             >

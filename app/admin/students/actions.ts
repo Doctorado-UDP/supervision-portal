@@ -140,29 +140,6 @@ export async function createStudent(
     };
   }
 
-  // Link this student to the current supervisor.
-  const { error: supervisionError } = await supabase
-    .from("supervisions")
-    .insert({
-      supervisor_id: adminProfile.id,
-      student_id: student.id,
-    });
-
-  if (supervisionError) {
-    console.error(supervisionError);
-
-    // Clean up the student record if the relationship failed.
-    await supabase
-      .from("students")
-      .delete()
-      .eq("id", student.id);
-
-    return {
-      error:
-        "The student could not be linked to the supervisor.",
-    };
-  }
-
   revalidatePath("/admin");
   revalidatePath("/admin/students");
 

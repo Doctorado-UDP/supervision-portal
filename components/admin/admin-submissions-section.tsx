@@ -13,25 +13,69 @@ type AdminSubmissionsSectionProps = {
 const SUPERVISOR_EMAIL =
   "bastian.gonzalez.b@mail.udp.cl";
 
-function formatBytes(bytes: number) {
+function formatBytes(
+  bytes: number
+) {
   if (bytes < 1024) {
     return `${bytes} B`;
   }
 
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
+  if (
+    bytes <
+    1024 * 1024
+  ) {
+    return `${(
+      bytes / 1024
+    ).toFixed(1)} KB`;
   }
 
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(
+    bytes /
+    1024 /
+    1024
+  ).toFixed(1)} MB`;
 }
 
 export default async function AdminSubmissionsSection({
   studentId,
 }: AdminSubmissionsSectionProps) {
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
 
   // ============================================================
-  // SUBMISSIONS
+  // RESOLVE STUDENT -> SUPERVISION CASE
+  // ============================================================
+
+  const {
+    data: membership,
+    error: membershipError,
+  } = await supabase
+    .from("case_members")
+    .select("case_id")
+    .eq(
+      "student_id",
+      studentId
+    )
+    .single();
+
+  if (
+    membershipError ||
+    !membership
+  ) {
+    console.error(
+      membershipError
+    );
+
+    throw new Error(
+      "Unable to resolve the student's supervision case."
+    );
+  }
+
+  const caseId =
+    membership.case_id;
+
+  // ============================================================
+  // CASE SUBMISSIONS
   // ============================================================
 
   const {
@@ -42,13 +86,23 @@ export default async function AdminSubmissionsSection({
     .select(
       "id, title, version, file_name, file_size_bytes, submitted_at, uploaded_by"
     )
-    .eq("student_id", studentId)
-    .order("submitted_at", {
-      ascending: false,
-    });
+    .eq(
+      "case_id",
+      caseId
+    )
+    .order(
+      "submitted_at",
+      {
+        ascending: false,
+      }
+    );
 
-  if (submissionsError) {
-    console.error(submissionsError);
+  if (
+    submissionsError
+  ) {
+    console.error(
+      submissionsError
+    );
 
     throw new Error(
       "Unable to load submissions."
@@ -56,7 +110,7 @@ export default async function AdminSubmissionsSection({
   }
 
   // ============================================================
-  // UPLOADER PROFILES
+  // UPLOADERS
   // ============================================================
 
   const uploaderIds = [
@@ -75,7 +129,9 @@ export default async function AdminSubmissionsSection({
     role: string;
   }[] = [];
 
-  if (uploaderIds.length > 0) {
+  if (
+    uploaderIds.length > 0
+  ) {
     const {
       data,
       error,
@@ -90,7 +146,9 @@ export default async function AdminSubmissionsSection({
       );
 
     if (error) {
-      console.error(error);
+      console.error(
+        error
+      );
 
       throw new Error(
         "Unable to load submission uploader information."
@@ -128,7 +186,9 @@ export default async function AdminSubmissionsSection({
     created_at: string;
   }[] = [];
 
-  if (submissionIds.length > 0) {
+  if (
+    submissionIds.length > 0
+  ) {
     const {
       data,
       error,
@@ -149,14 +209,17 @@ export default async function AdminSubmissionsSection({
       );
 
     if (error) {
-      console.error(error);
+      console.error(
+        error
+      );
 
       throw new Error(
         "Unable to load submission feedback."
       );
     }
 
-    feedback = data ?? [];
+    feedback =
+      data ?? [];
   }
 
   const feedbackMap =
@@ -173,7 +236,9 @@ export default async function AdminSubmissionsSection({
         item.submission_id
       ) ?? [];
 
-    existing.push(item);
+    existing.push(
+      item
+    );
 
     feedbackMap.set(
       item.submission_id,
@@ -193,14 +258,18 @@ export default async function AdminSubmissionsSection({
         </h2>
 
         <p className="mt-1 text-sm text-gray-500">
-          Versioned student documents and supervisor feedback.
+          Versioned documents shared
+          within this supervision
+          case.
         </p>
 
         <div className="mt-6">
           {!submissions ||
-          submissions.length === 0 ? (
+          submissions.length ===
+            0 ? (
             <p className="rounded-lg bg-gray-50 px-4 py-6 text-sm text-gray-500">
-              No submissions have been uploaded.
+              No submissions have
+              been uploaded.
             </p>
           ) : (
             <div className="space-y-6">
@@ -220,9 +289,11 @@ export default async function AdminSubmissionsSection({
                     uploader?.email?.toLowerCase() ===
                     SUPERVISOR_EMAIL.toLowerCase()
                       ? "supervisor"
-                      : uploader?.role === "admin"
+                      : uploader?.role ===
+                          "admin"
                         ? "staff"
-                        : uploader?.role === "student"
+                        : uploader?.role ===
+                            "student"
                           ? "student"
                           : null;
 
@@ -273,6 +344,7 @@ export default async function AdminSubmissionsSection({
                             Uploaded by{" "}
                             {uploader?.full_name ??
                               "Unknown user"}
+
                             {uploaderLabel
                               ? ` (${uploaderLabel})`
                               : ""}
@@ -295,7 +367,8 @@ export default async function AdminSubmissionsSection({
                         {items.length ===
                         0 ? (
                           <p className="mt-2 text-sm text-gray-500">
-                            No feedback posted yet.
+                            No feedback
+                            posted yet.
                           </p>
                         ) : (
                           <div className="mt-3 space-y-3">
@@ -350,14 +423,17 @@ export default async function AdminSubmissionsSection({
         </h2>
 
         <p className="mt-1 text-sm leading-6 text-gray-500">
-          Upload a PDF or Word document directly to this
-          student&apos;s submission record. The student will be
-          able to access the file through their portal.
+          Upload a PDF or Word
+          document directly to this
+          supervision&apos;s shared
+          submission record.
         </p>
 
         <div className="mt-6">
           <SubmissionUploadForm
-            studentId={studentId}
+            caseId={
+              caseId
+            }
           />
         </div>
       </div>

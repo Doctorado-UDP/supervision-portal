@@ -66,7 +66,10 @@ export default async function StudentPage() {
     .select(
       "id, full_name, role"
     )
-    .eq("id", userId)
+    .eq(
+      "id",
+      userId
+    )
     .single();
 
   if (
@@ -138,7 +141,46 @@ export default async function StudentPage() {
   }
 
   // ============================================================
+  // SUPERVISION CASE
+  // ============================================================
+
+  const {
+    data: caseMembership,
+    error: caseMembershipError,
+  } = await supabase
+    .from("case_members")
+    .select("case_id")
+    .eq(
+      "student_id",
+      student.id
+    )
+    .single();
+
+  if (
+    caseMembershipError ||
+    !caseMembership
+  ) {
+    console.error(
+      caseMembershipError
+    );
+
+    throw new Error(
+      "Unable to load supervision case."
+    );
+  }
+
+  const caseId =
+    caseMembership.case_id;
+
+  // ============================================================
   // SUPERVISION DATA
+  // ============================================================
+  //
+  // C4.2:
+  // Submissions are now loaded at CASE level.
+  //
+  // Milestones and meetings remain student-based temporarily.
+  // They will move to case_id in C4.3.
   // ============================================================
 
   const [
@@ -152,8 +194,8 @@ export default async function StudentPage() {
         "id, title, version, file_name, file_size_bytes, submitted_at, uploaded_by"
       )
       .eq(
-        "student_id",
-        student.id
+        "case_id",
+        caseId
       )
       .order(
         "submitted_at",
@@ -168,8 +210,8 @@ export default async function StudentPage() {
         "id, title, description, target_date, status"
       )
       .eq(
-        "student_id",
-        student.id
+        "case_id",
+        caseId
       )
       .order(
         "target_date",
@@ -184,8 +226,8 @@ export default async function StudentPage() {
         "id, scheduled_at, notes"
       )
       .eq(
-        "student_id",
-        student.id
+        "case_id",
+        caseId
       )
       .order(
         "scheduled_at",
@@ -254,12 +296,17 @@ export default async function StudentPage() {
       );
 
     if (error) {
+      console.error(
+        error
+      );
+
       throw new Error(
         "Unable to load feedback."
       );
     }
 
-    feedback = data ?? [];
+    feedback =
+      data ?? [];
   }
 
   const feedbackMap =
@@ -276,7 +323,9 @@ export default async function StudentPage() {
         item.submission_id
       ) ?? [];
 
-    existing.push(item);
+    existing.push(
+      item
+    );
 
     feedbackMap.set(
       item.submission_id,
@@ -323,6 +372,12 @@ export default async function StudentPage() {
               Submissions
             </h2>
 
+            <p className="mt-1 text-sm leading-6 text-gray-500">
+              Documents and feedback
+              shared within your
+              supervision.
+            </p>
+
             <div className="mt-6 space-y-5">
               {submissions.length ===
               0 ? (
@@ -338,7 +393,7 @@ export default async function StudentPage() {
                         submission.id
                       ) ?? [];
 
-                    const uploadedByStudent =
+                    const uploadedByCurrentUser =
                       submission.uploaded_by ===
                       userId;
 
@@ -383,9 +438,9 @@ export default async function StudentPage() {
                             </p>
 
                             <p className="mt-1 text-xs text-gray-500">
-                              {uploadedByStudent
+                              {uploadedByCurrentUser
                                 ? "Uploaded by you"
-                                : "Uploaded by staff"}
+                                : "Uploaded by another case participant"}
                             </p>
                           </div>
 
@@ -453,13 +508,15 @@ export default async function StudentPage() {
             </h2>
 
             <p className="mt-1 text-sm leading-6 text-gray-500">
-              Upload a PDF or Word document to your supervision record.
+              Upload a PDF or Word
+              document to your shared
+              supervision record.
             </p>
 
             <div className="mt-6">
               <SubmissionUploadForm
-                studentId={
-                  student.id
+                caseId={
+                  caseId
                 }
               />
             </div>
@@ -512,6 +569,14 @@ export default async function StudentPage() {
                           milestone.status
                         }
                       </p>
+
+                      {milestone.description && (
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-gray-600">
+                          {
+                            milestone.description
+                          }
+                        </p>
+                      )}
                     </div>
                   )
                 )
@@ -528,9 +593,13 @@ export default async function StudentPage() {
 
             <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
               <p className="text-sm leading-6 text-gray-700">
-                Use SavvyCal to book a supervision meeting.
-                Confirmed meetings will subsequently appear in
-                this portal as part of your supervision record.
+                Use SavvyCal to book
+                a supervision
+                meeting. Confirmed
+                meetings will be
+                added to the portal
+                by your supervisor or
+                a member of staff.
               </p>
 
               <a
@@ -541,7 +610,8 @@ export default async function StudentPage() {
                 rel="noopener noreferrer"
                 className="mt-3 inline-flex rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
               >
-                Book a supervision meeting
+                Book a supervision
+                meeting
               </a>
             </div>
 

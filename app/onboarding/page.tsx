@@ -41,8 +41,8 @@ export default async function OnboardingPage() {
           <div className="mb-8 text-center">
             <div className="mb-6 flex justify-center">
               <Image
-                src="/branding/university-logo.png"
-                alt="University logo"
+                src="/branding/udp.png"
+                alt="Universidad Diego Portales"
                 width={267}
                 height={65}
                 priority
