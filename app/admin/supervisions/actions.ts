@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { requireGlobalSupervisor } from "@/lib/auth/require-admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type ConfigureSupervisionState = {
@@ -15,43 +16,16 @@ export async function configureSupervision(
 ): Promise<ConfigureSupervisionState> {
   void previousState;
 
-  const supabase = await createClient();
-
   // ============================================================
   // AUTHORIZATION
   // ============================================================
 
-  const {
-    data: claimsData,
-    error: claimsError,
-  } = await supabase.auth.getClaims();
+  await requireGlobalSupervisor(
+    "/admin/supervisions"
+  );
 
-  const userId =
-    claimsData?.claims?.sub;
-
-  if (
-    claimsError ||
-    !userId
-  ) {
-    redirect("/login");
-  }
-
-  const {
-    data: profile,
-    error: profileError,
-  } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .single();
-
-  if (
-    profileError ||
-    !profile ||
-    profile.role !== "admin"
-  ) {
-    redirect("/student");
-  }
+  const supabase =
+    await createClient();
 
   // ============================================================
   // FORM VALUES
@@ -188,18 +162,25 @@ export async function configureSupervision(
     {
       p_case_id:
         caseId,
+
       p_title:
         title,
+
       p_student_ids:
         studentIds,
+
       p_staff_ids:
         staffIds,
+
       p_programme:
         programme,
+
       p_start_date:
         startDate,
+
       p_target_completion_date:
         targetCompletionDate,
+
       p_status:
         status,
     }
@@ -222,17 +203,24 @@ export async function configureSupervision(
   // ============================================================
 
   revalidatePath("/admin");
+
   revalidatePath(
     "/admin/students"
   );
+
   revalidatePath(
     "/admin/supervisions"
   );
+
   revalidatePath(
     "/admin/timetable"
   );
 
   if (configuredCaseId) {
+    revalidatePath(
+      `/admin/supervisions/${configuredCaseId}`
+    );
+
     revalidatePath(
       `/admin/supervisions/${configuredCaseId}/edit`
     );

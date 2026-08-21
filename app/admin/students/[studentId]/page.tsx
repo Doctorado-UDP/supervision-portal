@@ -3,6 +3,11 @@ import { notFound } from "next/navigation";
 
 import StudentDetailsForm from "@/components/admin/student-details-form";
 
+import {
+  isGlobalSupervisor,
+  requireAdmin,
+} from "@/lib/auth/require-admin";
+
 import { createClient } from "@/lib/supabase/server";
 
 type StudentPageProps = {
@@ -39,11 +44,22 @@ export default async function StudentPage({
     studentId,
   } = await params;
 
+  const admin =
+    await requireAdmin();
+
+  const canEditStudent =
+    isGlobalSupervisor(
+      admin
+    );
+
   const supabase =
     await createClient();
 
   // ============================================================
   // STUDENT
+  //
+  // RLS means an assigned staff member can retrieve this record
+  // only if the student belongs to an assigned case.
   // ============================================================
 
   const {
@@ -61,7 +77,18 @@ export default async function StudentPage({
     .maybeSingle();
 
   if (
-    studentError ||
+    studentError
+  ) {
+    console.error(
+      studentError
+    );
+
+    throw new Error(
+      "Unable to load student record."
+    );
+  }
+
+  if (
     !student
   ) {
     notFound();
@@ -161,10 +188,6 @@ export default async function StudentPage({
     );
   }
 
-  // ============================================================
-  // RENDER
-  // ============================================================
-
   return (
     <div className="space-y-8">
       <div>
@@ -207,26 +230,85 @@ export default async function StudentPage({
       {/* STUDENT DETAILS */}
 
       <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-950">
-          Student details
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-950">
+              Student details
+            </h2>
 
-        <p className="mt-1 text-sm text-gray-500">
-          Individual student
-          information and programme
-          record.
-        </p>
+            <p className="mt-1 text-sm text-gray-500">
+              Individual student
+              information and
+              programme record.
+            </p>
+          </div>
 
-        <div className="mt-6 max-w-3xl">
-          <StudentDetailsForm
-            student={
-              student
-            }
-            profile={
-              profile
-            }
-          />
+          {!canEditStudent && (
+            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+              Read only
+            </span>
+          )}
         </div>
+
+        {canEditStudent ? (
+          <div className="mt-6 max-w-3xl">
+            <StudentDetailsForm
+              student={
+                student
+              }
+              profile={
+                profile
+              }
+            />
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Programme
+              </p>
+
+              <p className="mt-1 text-sm text-gray-900">
+                {student.programme ??
+                  "—"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Start date
+              </p>
+
+              <p className="mt-1 text-sm text-gray-900">
+                {student.start_date ??
+                  "—"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Target completion
+              </p>
+
+              <p className="mt-1 text-sm text-gray-900">
+                {student.target_completion_date ??
+                  "—"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Status
+              </p>
+
+              <p className="mt-1 text-sm text-gray-900">
+                {formatStudentStatus(
+                  student.status
+                )}
+              </p>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* SUPERVISION */}

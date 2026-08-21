@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireAdmin } from "@/lib/auth/require-admin";
+import {
+  requireAdmin,
+  requireGlobalSupervisor,
+} from "@/lib/auth/require-admin";
+
 import { createClient } from "@/lib/supabase/server";
 
 export type PlanningActionState = {
@@ -29,27 +33,45 @@ function revalidateStudentPages(
   studentId: string
 ) {
   revalidatePath("/admin");
+
   revalidatePath(
     "/admin/timetable"
   );
+
   revalidatePath(
     "/admin/students"
   );
+
   revalidatePath(
     `/admin/students/${studentId}`
   );
-  revalidatePath("/student");
+
+  revalidatePath(
+    "/admin/supervisions"
+  );
+
+  revalidatePath(
+    "/student"
+  );
 }
 
 // ============================================================
 // UPDATE STUDENT DETAILS
+// ============================================================
+//
+// SUPERVISOR ONLY.
+//
+// Assigned staff may read students belonging to their assigned
+// cases, but may not change the student's administrative record.
 // ============================================================
 
 export async function updateStudentDetails(
   _previousState: PlanningActionState,
   formData: FormData
 ): Promise<PlanningActionState> {
-  await requireAdmin();
+  await requireGlobalSupervisor(
+    "/admin/students"
+  );
 
   const supabase =
     await createClient();
@@ -175,7 +197,9 @@ export async function updateStudentDetails(
       student.user_id
     );
 
-  if (profileError) {
+  if (
+    profileError
+  ) {
     console.error(
       profileError
     );
@@ -210,7 +234,9 @@ export async function updateStudentDetails(
       studentId
     );
 
-  if (studentError) {
+  if (
+    studentError
+  ) {
     console.error(
       studentError
     );
@@ -237,19 +263,15 @@ export async function updateStudentDetails(
 // CREATE MILESTONE
 // ============================================================
 //
-// Milestones are supervision-case records.
+// LEGACY / COMPATIBILITY ACTION.
 //
-// The existing admin student workspace continues passing
-// student_id. The action resolves:
+// Operational supervision activity remains available to any
+// authenticated admin-side account. RLS determines whether the
+// account may operate on the resolved supervision case.
 //
-// student_id -> case_members -> case_id
+// The canonical C4.5 workspace now uses case-level actions under:
 //
-// The new milestone is saved as:
-//
-// case_id    = supervision case
-// student_id = NULL
-//
-// Therefore every member of a group sees the same milestone.
+// /admin/supervisions/[caseId]/actions.ts
 // ============================================================
 
 export async function createMilestone(
@@ -320,14 +342,14 @@ export async function createMilestone(
     };
   }
 
-  // Resolve student -> case.
-
   const {
     data: membership,
     error: membershipError,
   } = await supabase
     .from("case_members")
-    .select("case_id")
+    .select(
+      "case_id"
+    )
     .eq(
       "student_id",
       studentId
@@ -405,17 +427,6 @@ export async function createMilestone(
 // ============================================================
 // UPDATE MILESTONE STATUS
 // ============================================================
-//
-// New milestones have student_id = NULL.
-//
-// Therefore milestone changes are constrained by:
-//
-// milestone_id + case_id
-//
-// rather than:
-//
-// milestone_id + student_id
-// ============================================================
 
 export async function updateMilestoneStatus(
   formData: FormData
@@ -456,14 +467,14 @@ export async function updateMilestoneStatus(
     return;
   }
 
-  // Resolve student -> case.
-
   const {
     data: membership,
     error: membershipError,
   } = await supabase
     .from("case_members")
-    .select("case_id")
+    .select(
+      "case_id"
+    )
     .eq(
       "student_id",
       studentId
@@ -512,7 +523,6 @@ export async function updateMilestoneStatus(
 
   if (error) {
     console.error(error);
-
     return;
   }
 
@@ -554,14 +564,14 @@ export async function deleteMilestone(
     return;
   }
 
-  // Resolve student -> case.
-
   const {
     data: membership,
     error: membershipError,
   } = await supabase
     .from("case_members")
-    .select("case_id")
+    .select(
+      "case_id"
+    )
     .eq(
       "student_id",
       studentId
@@ -595,7 +605,6 @@ export async function deleteMilestone(
 
   if (error) {
     console.error(error);
-
     return;
   }
 
@@ -606,18 +615,6 @@ export async function deleteMilestone(
 
 // ============================================================
 // CREATE MEETING
-// ============================================================
-//
-// Meetings are now also supervision-case records.
-//
-// The existing form still passes student_id. We resolve that
-// student to their current case and save:
-//
-// case_id    = supervision case
-// student_id = NULL
-//
-// created_by continues recording which admin actually added the
-// meeting.
 // ============================================================
 
 export async function createMeeting(
@@ -679,14 +676,14 @@ export async function createMeeting(
     };
   }
 
-  // Resolve student -> case.
-
   const {
     data: membership,
     error: membershipError,
   } = await supabase
     .from("case_members")
-    .select("case_id")
+    .select(
+      "case_id"
+    )
     .eq(
       "student_id",
       studentId
@@ -753,15 +750,6 @@ export async function createMeeting(
 // ============================================================
 // DELETE MEETING
 // ============================================================
-//
-// New meetings have student_id = NULL, so deletion is now
-// constrained by:
-//
-// meeting_id + case_id
-//
-// This also means deleting a meeting from either student's
-// workspace removes the one shared meeting record.
-// ============================================================
 
 export async function deleteMeeting(
   formData: FormData
@@ -792,14 +780,14 @@ export async function deleteMeeting(
     return;
   }
 
-  // Resolve student -> case.
-
   const {
     data: membership,
     error: membershipError,
   } = await supabase
     .from("case_members")
-    .select("case_id")
+    .select(
+      "case_id"
+    )
     .eq(
       "student_id",
       studentId
@@ -833,7 +821,6 @@ export async function deleteMeeting(
 
   if (error) {
     console.error(error);
-
     return;
   }
 

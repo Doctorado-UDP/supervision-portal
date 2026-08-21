@@ -2,10 +2,12 @@ import Link from "next/link";
 
 import SupervisionCaseForm from "@/components/admin/supervision-case-form";
 
-import { createClient } from "@/lib/supabase/server";
+import {
+  isGlobalSupervisor,
+  requireAdmin,
+} from "@/lib/auth/require-admin";
 
-const SUPERVISOR_EMAIL =
-  "bastian.gonzalez.b@mail.udp.cl";
+import { createClient } from "@/lib/supabase/server";
 
 function formatStatus(
   status: string
@@ -29,11 +31,24 @@ function formatStatus(
 }
 
 export default async function AdminSupervisionsPage() {
+  const admin =
+    await requireAdmin();
+
+  const canConfigure =
+    isGlobalSupervisor(
+      admin
+    );
+
   const supabase =
     await createClient();
 
   // ============================================================
   // LOAD CASE DATA
+  //
+  // RLS now determines which cases are returned:
+  //
+  // Supervisor -> all cases
+  // Staff      -> assigned cases only
   // ============================================================
 
   const [
@@ -84,10 +99,6 @@ export default async function AdminSupervisionsPage() {
       ),
   ]);
 
-  // ============================================================
-  // ERRORS
-  // ============================================================
-
   if (
     casesResult.error ||
     membersResult.error ||
@@ -124,7 +135,7 @@ export default async function AdminSupervisionsPage() {
     staffResult.data ?? [];
 
   // ============================================================
-  // LOOKUP MAPS
+  // LOOKUPS
   // ============================================================
 
   const profileMap =
@@ -207,116 +218,98 @@ export default async function AdminSupervisionsPage() {
   }
 
   // ============================================================
-  // PRIMARY SUPERVISOR
-  // ============================================================
-
-  const supervisor =
-    profiles.find(
-      (profile) =>
-        profile.role ===
-          "admin" &&
-        profile.email?.toLowerCase() ===
-          SUPERVISOR_EMAIL.toLowerCase()
-    );
-
-  if (!supervisor) {
-    throw new Error(
-      "Primary supervisor account could not be found."
-    );
-  }
-
-  // ============================================================
-  // AVAILABLE STUDENTS
-  // ============================================================
-  //
-  // Only students currently in an individual case are available
-  // for the configuration/merge form.
+  // SUPERVISOR-ONLY CONFIGURATION DATA
   // ============================================================
 
   const availableStudents =
-    students
-      .flatMap(
-        (student) => {
-          const caseId =
-            caseByStudent.get(
-              student.id
-            );
+    canConfigure
+      ? students
+          .flatMap(
+            (student) => {
+              const caseId =
+                caseByStudent.get(
+                  student.id
+                );
 
-          if (!caseId) {
-            return [];
-          }
+              if (!caseId) {
+                return [];
+              }
 
-          const caseMembers =
-            membersByCase.get(
-              caseId
-            ) ?? [];
+              const caseMembers =
+                membersByCase.get(
+                  caseId
+                ) ?? [];
 
-          if (
-            caseMembers.length !==
-            1
-          ) {
-            return [];
-          }
+              if (
+                caseMembers.length !==
+                1
+              ) {
+                return [];
+              }
 
-          const profile =
-            profileMap.get(
-              student.user_id
-            );
+              const profile =
+                profileMap.get(
+                  student.user_id
+                );
 
-          if (!profile) {
-            return [];
-          }
+              if (!profile) {
+                return [];
+              }
 
-          return [
-            {
-              id:
-                student.id,
-              fullName:
-                profile.full_name,
-              email:
-                profile.email,
-              programme:
-                student.programme,
-            },
-          ];
-        }
-      )
-      .sort(
-        (a, b) =>
-          a.fullName.localeCompare(
-            b.fullName
+              return [
+                {
+                  id:
+                    student.id,
+
+                  fullName:
+                    profile.full_name,
+
+                  email:
+                    profile.email,
+
+                  programme:
+                    student.programme,
+                },
+              ];
+            }
           )
-      );
-
-  // ============================================================
-  // ADDITIONAL STAFF OPTIONS
-  // ============================================================
+          .sort(
+            (a, b) =>
+              a.fullName.localeCompare(
+                b.fullName
+              )
+          )
+      : [];
 
   const staffOptions =
-    profiles
-      .filter(
-        (profile) =>
-          profile.role ===
-            "admin" &&
-          profile.email?.toLowerCase() !==
-            SUPERVISOR_EMAIL.toLowerCase()
-      )
-      .map(
-        (profile) => ({
-          id:
-            profile.id,
-          fullName:
-            profile.full_name,
-          email:
-            profile.email,
-        })
-      )
-      .sort(
-        (a, b) =>
-          a.fullName.localeCompare(
-            b.fullName
+    canConfigure
+      ? profiles
+          .filter(
+            (profile) =>
+              profile.role ===
+                "admin" &&
+              profile.id !==
+                admin.id
           )
-      );
+          .map(
+            (profile) => ({
+              id:
+                profile.id,
+
+              fullName:
+                profile.full_name,
+
+              email:
+                profile.email,
+            })
+          )
+          .sort(
+            (a, b) =>
+              a.fullName.localeCompare(
+                b.fullName
+              )
+          )
+      : [];
 
   // ============================================================
   // RENDER
@@ -324,29 +317,37 @@ export default async function AdminSupervisionsPage() {
 
   return (
     <div className="space-y-8">
-      {/* PAGE HEADER */}
-
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-gray-950">
           Supervisions
         </h1>
 
         <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
-          Manage individual and
-          group thesis supervision
-          cases, student membership,
-          and associated staff.
+          {canConfigure
+            ? "Manage individual and group thesis supervision cases, student membership, and associated staff."
+            : "View and manage the supervision cases assigned to you."}
         </p>
       </div>
 
-      <section className="grid gap-8 xl:grid-cols-3">
+      <section
+        className={
+          canConfigure
+            ? "grid gap-8 xl:grid-cols-3"
+            : ""
+        }
+      >
         {/* CASE LIST */}
 
-        <div className="space-y-5 xl:col-span-2">
+        <div
+          className={
+            canConfigure
+              ? "space-y-5 xl:col-span-2"
+              : "space-y-5"
+          }
+        >
           <div>
             <h2 className="text-lg font-semibold text-gray-950">
-              Current
-              supervisions
+              Current supervisions
             </h2>
 
             <p className="mt-1 text-sm text-gray-500">
@@ -361,9 +362,9 @@ export default async function AdminSupervisionsPage() {
           0 ? (
             <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <p className="text-sm text-gray-500">
-                No supervision
-                cases have been
-                configured.
+                {canConfigure
+                  ? "No supervision cases have been configured."
+                  : "No supervision cases are currently assigned to you."}
               </p>
             </div>
           ) : (
@@ -410,8 +411,10 @@ export default async function AdminSupervisionsPage() {
                         {
                           id:
                             student.id,
+
                           fullName:
                             profile.full_name,
+
                           email:
                             profile.email,
                         },
@@ -439,10 +442,13 @@ export default async function AdminSupervisionsPage() {
                         {
                           id:
                             profile.id,
+
                           fullName:
                             profile.full_name,
+
                           email:
                             profile.email,
+
                           role:
                             staffRelation.staff_role,
                         },
@@ -508,13 +514,15 @@ export default async function AdminSupervisionsPage() {
                         >
                           Open workspace
                         </Link>
-                        
-                        <Link
-                          href={`/admin/supervisions/${supervisionCase.id}/edit`}
-                          className="h-fit rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                          Edit configuration
-                        </Link>
+
+                        {canConfigure && (
+                          <Link
+                            href={`/admin/supervisions/${supervisionCase.id}/edit`}
+                            className="h-fit rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            Edit configuration
+                          </Link>
+                        )}
                       </div>
                     </div>
 
@@ -567,8 +575,7 @@ export default async function AdminSupervisionsPage() {
 
                     <div className="mt-5 border-t border-gray-100 pt-5">
                       <h4 className="text-sm font-semibold text-gray-900">
-                        Supervision
-                        team
+                        Supervision team
                       </h4>
 
                       {staffMembers.length ===
@@ -634,8 +641,7 @@ export default async function AdminSupervisionsPage() {
 
                       <div>
                         <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                          Target
-                          completion
+                          Target completion
                         </p>
 
                         <p className="mt-1 text-sm text-gray-900">
@@ -651,39 +657,40 @@ export default async function AdminSupervisionsPage() {
           )}
         </div>
 
-        {/* CONFIGURATION FORM */}
+        {/* SUPERVISOR-ONLY CONFIGURATION */}
 
-        <aside>
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm xl:sticky xl:top-24">
-            <h2 className="text-lg font-semibold text-gray-950">
-              Configure
-              supervision
-            </h2>
+        {canConfigure && (
+          <aside>
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm xl:sticky xl:top-24">
+              <h2 className="text-lg font-semibold text-gray-950">
+                Configure supervision
+              </h2>
 
-            <p className="mt-1 text-sm leading-6 text-gray-500">
-              Configure an
-              individual case or
-              combine two to three
-              individual student
-              cases into a group
-              supervision.
-            </p>
+              <p className="mt-1 text-sm leading-6 text-gray-500">
+                Configure an
+                individual case or
+                combine two to three
+                individual student
+                cases into a group
+                supervision.
+              </p>
 
-            <div className="mt-6">
-              <SupervisionCaseForm
-                students={
-                  availableStudents
-                }
-                staff={
-                  staffOptions
-                }
-                supervisorName={
-                  supervisor.full_name
-                }
-              />
+              <div className="mt-6">
+                <SupervisionCaseForm
+                  students={
+                    availableStudents
+                  }
+                  staff={
+                    staffOptions
+                  }
+                  supervisorName={
+                    admin.full_name
+                  }
+                />
+              </div>
             </div>
-          </div>
-        </aside>
+          </aside>
+        )}
       </section>
     </div>
   );

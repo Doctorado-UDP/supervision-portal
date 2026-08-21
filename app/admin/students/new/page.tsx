@@ -1,24 +1,52 @@
 import Link from "next/link";
 
 import StudentForm from "@/components/admin/student-form";
+
+import {
+  requireGlobalSupervisor,
+} from "@/lib/auth/require-admin";
+
 import { createClient } from "@/lib/supabase/server";
 
 export default async function NewStudentPage() {
-  const supabase = await createClient();
+  await requireGlobalSupervisor(
+    "/admin/students"
+  );
 
-  const [profilesResult, studentsResult] = await Promise.all([
+  const supabase =
+    await createClient();
+
+  const [
+    profilesResult,
+    studentsResult,
+  ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, email, role")
-      .eq("role", "student")
-      .order("full_name", { ascending: true }),
+      .select(
+        "id, full_name, email, role"
+      )
+      .eq(
+        "role",
+        "student"
+      )
+      .order(
+        "full_name",
+        {
+          ascending: true,
+        }
+      ),
 
     supabase
       .from("students")
-      .select("user_id"),
+      .select(
+        "user_id"
+      ),
   ]);
 
-  if (profilesResult.error || studentsResult.error) {
+  if (
+    profilesResult.error ||
+    studentsResult.error
+  ) {
     console.error(
       profilesResult.error,
       studentsResult.error
@@ -29,17 +57,27 @@ export default async function NewStudentPage() {
     );
   }
 
-  const registeredUserIds = new Set(
-    (studentsResult.data ?? []).map(
-      (student) => student.user_id
-    )
-  );
+  const registeredUserIds =
+    new Set(
+      (
+        studentsResult.data ??
+        []
+      ).map(
+        (student) =>
+          student.user_id
+      )
+    );
 
-  const availableProfiles = (
-    profilesResult.data ?? []
-  ).filter(
-    (profile) => !registeredUserIds.has(profile.id)
-  );
+  const availableProfiles =
+    (
+      profilesResult.data ??
+      []
+    ).filter(
+      (profile) =>
+        !registeredUserIds.has(
+          profile.id
+        )
+    );
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -56,26 +94,35 @@ export default async function NewStudentPage() {
         </h1>
 
         <p className="mt-2 text-gray-600">
-          Create a supervision record for an invited student account.
+          Create a supervision
+          record for an invited
+          student account.
         </p>
       </div>
 
-      {availableProfiles.length === 0 ? (
+      {availableProfiles.length ===
+      0 ? (
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="font-semibold text-gray-900">
-            No available student accounts
+            No available student
+            accounts
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-gray-600">
-            Invite the student first in Supabase under
-            Authentication → Users → Send invitation. After the
-            account is created, refresh this page.
+            Invite the student first
+            in Supabase under
+            Authentication → Users →
+            Send invitation. After
+            the account is created,
+            refresh this page.
           </p>
         </div>
       ) : (
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <StudentForm
-            availableProfiles={availableProfiles}
+            availableProfiles={
+              availableProfiles
+            }
           />
         </div>
       )}

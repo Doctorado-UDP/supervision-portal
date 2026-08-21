@@ -5,6 +5,11 @@ import AdminSubmissionsSection from "@/components/admin/admin-submissions-sectio
 import MeetingForm from "@/components/admin/meeting-form";
 import MilestoneForm from "@/components/admin/milestone-form";
 
+import {
+  isGlobalSupervisor,
+  requireAdmin,
+} from "@/lib/auth/require-admin";
+
 import { SITE_CONFIG } from "@/lib/config/site";
 import { formatPortalDateTime } from "@/lib/datetime/format";
 import { createClient } from "@/lib/supabase/server";
@@ -67,12 +72,16 @@ export default async function SupervisionPage({
     caseId,
   } = await params;
 
+  const admin =
+    await requireAdmin();
+
+  const canConfigure =
+    isGlobalSupervisor(
+      admin
+    );
+
   const supabase =
     await createClient();
-
-  // ============================================================
-  // CASE + SHARED CONTENT
-  // ============================================================
 
   const [
     caseResult,
@@ -86,7 +95,10 @@ export default async function SupervisionPage({
       .select(
         "id, title, case_type, programme, start_date, target_completion_date, status"
       )
-      .eq("id", caseId)
+      .eq(
+        "id",
+        caseId
+      )
       .maybeSingle(),
 
     supabase
@@ -142,7 +154,9 @@ export default async function SupervisionPage({
       ),
   ]);
 
-  if (caseResult.error) {
+  if (
+    caseResult.error
+  ) {
     console.error(
       caseResult.error
     );
@@ -152,7 +166,11 @@ export default async function SupervisionPage({
     );
   }
 
-  if (!caseResult.data) {
+  // This also covers an assigned staff member attempting to
+  // navigate manually to a case they cannot access.
+  if (
+    !caseResult.data
+  ) {
     notFound();
   }
 
@@ -242,6 +260,7 @@ export default async function SupervisionPage({
         (student) =>
           student.user_id
       ),
+
       ...caseStaff.map(
         (staff) =>
           staff.staff_id
@@ -310,8 +329,10 @@ export default async function SupervisionPage({
             {
               studentId:
                 student.id,
+
               fullName:
                 profile.full_name,
+
               email:
                 profile.email,
             },
@@ -342,10 +363,13 @@ export default async function SupervisionPage({
             {
               profileId:
                 profile.id,
+
               fullName:
                 profile.full_name,
+
               email:
                 profile.email,
+
               role:
                 staff.staff_role,
             },
@@ -377,10 +401,6 @@ export default async function SupervisionPage({
           );
         }
       );
-
-  // ============================================================
-  // RENDER
-  // ============================================================
 
   return (
     <div className="space-y-8">
@@ -426,20 +446,20 @@ export default async function SupervisionPage({
             )}
           </div>
 
-          <Link
-            href={`/admin/supervisions/${caseId}/edit`}
-            className="h-fit rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Edit configuration
-          </Link>
+          {canConfigure && (
+            <Link
+              href={`/admin/supervisions/${caseId}/edit`}
+              className="h-fit rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Edit configuration
+            </Link>
+          )}
         </div>
       </div>
 
       {/* CASE OVERVIEW */}
 
       <section className="grid gap-6 lg:grid-cols-2">
-        {/* STUDENTS */}
-
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-950">
             Students
@@ -494,8 +514,6 @@ export default async function SupervisionPage({
             )}
           </div>
         </div>
-
-        {/* TEAM */}
 
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-950">
@@ -889,8 +907,6 @@ export default async function SupervisionPage({
           </div>
         </div>
       </section>
-
-      {/* SUBMISSIONS */}
 
       <AdminSubmissionsSection
         caseId={

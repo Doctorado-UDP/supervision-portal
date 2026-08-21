@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 
 import SupervisionCaseForm from "@/components/admin/supervision-case-form";
 
-import { createClient } from "@/lib/supabase/server";
+import {
+  requireGlobalSupervisor,
+} from "@/lib/auth/require-admin";
 
-const SUPERVISOR_EMAIL =
-  "bastian.gonzalez.b@mail.udp.cl";
+import { createClient } from "@/lib/supabase/server";
 
 type EditSupervisionPageProps = {
   params: Promise<{
@@ -20,6 +20,11 @@ export default async function EditSupervisionPage({
   const {
     caseId,
   } = await params;
+
+  const supervisor =
+    await requireGlobalSupervisor(
+      `/admin/supervisions/${caseId}`
+    );
 
   const supabase =
     await createClient();
@@ -40,20 +45,23 @@ export default async function EditSupervisionPage({
       "id",
       caseId
     )
-    .maybeSingle();
+    .single();
 
-  if (caseError) {
+  if (
+    caseError ||
+    !supervisionCase
+  ) {
     console.error(
-      caseError
+      "Edit supervision case lookup failed:",
+      {
+        caseId,
+        caseError,
+      }
     );
 
     throw new Error(
       "Unable to load supervision case."
     );
-  }
-
-  if (!supervisionCase) {
-    notFound();
   }
 
   // ============================================================
@@ -184,14 +192,6 @@ export default async function EditSupervisionPage({
   // ============================================================
   // AVAILABLE STUDENTS
   // ============================================================
-  //
-  // Include:
-  // 1. everyone already in this case
-  // 2. students in another individual case
-  //
-  // Exclude:
-  // students belonging to some other group.
-  // ============================================================
 
   const availableStudents =
     students
@@ -240,10 +240,13 @@ export default async function EditSupervisionPage({
             {
               id:
                 student.id,
+
               fullName:
                 profile.full_name,
+
               email:
                 profile.email,
+
               programme:
                 student.programme,
             },
@@ -258,25 +261,6 @@ export default async function EditSupervisionPage({
       );
 
   // ============================================================
-  // SUPERVISOR
-  // ============================================================
-
-  const supervisor =
-    profiles.find(
-      (profile) =>
-        profile.role ===
-          "admin" &&
-        profile.email?.toLowerCase() ===
-          SUPERVISOR_EMAIL.toLowerCase()
-    );
-
-  if (!supervisor) {
-    throw new Error(
-      "Primary supervisor account could not be found."
-    );
-  }
-
-  // ============================================================
   // STAFF OPTIONS
   // ============================================================
 
@@ -286,15 +270,17 @@ export default async function EditSupervisionPage({
         (profile) =>
           profile.role ===
             "admin" &&
-          profile.email?.toLowerCase() !==
-            SUPERVISOR_EMAIL.toLowerCase()
+          profile.id !==
+            supervisor.id
       )
       .map(
         (profile) => ({
           id:
             profile.id,
+
           fullName:
             profile.full_name,
+
           email:
             profile.email,
         })
@@ -328,10 +314,10 @@ export default async function EditSupervisionPage({
     <div className="mx-auto max-w-4xl space-y-8">
       <div>
         <Link
-          href="/admin/supervisions"
+          href={`/admin/supervisions/${caseId}`}
           className="text-sm font-medium text-gray-600 hover:text-gray-950"
         >
-          ← Back to supervisions
+          ← Back to supervision
         </Link>
 
         <h1 className="mt-4 text-3xl font-semibold tracking-tight text-gray-950">
