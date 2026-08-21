@@ -7,10 +7,10 @@ import {
 import {
   createFeedback,
   type FeedbackActionState,
-} from "@/app/admin/students/[studentId]/submission-actions";
+} from "@/app/admin/supervisions/[caseId]/actions";
 
 type FeedbackFormProps = {
-  studentId: string;
+  caseId: string;
   submissionId: string;
 };
 
@@ -21,7 +21,7 @@ const initialState: FeedbackActionState =
   };
 
 export default function FeedbackForm({
-  studentId,
+  caseId,
   submissionId,
 }: FeedbackFormProps) {
   const [
@@ -40,8 +40,8 @@ export default function FeedbackForm({
     >
       <input
         type="hidden"
-        name="student_id"
-        value={studentId}
+        name="case_id"
+        value={caseId}
       />
 
       <input

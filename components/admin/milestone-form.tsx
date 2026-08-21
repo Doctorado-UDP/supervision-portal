@@ -1,14 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import {
+  useActionState,
+} from "react";
 
 import {
   createMilestone,
   type PlanningActionState,
-} from "@/app/admin/students/[studentId]/actions";
+} from "@/app/admin/supervisions/[caseId]/actions";
 
 type MilestoneFormProps = {
-  studentId: string;
+  caseId: string;
 };
 
 const initialState: PlanningActionState = {
@@ -17,19 +19,26 @@ const initialState: PlanningActionState = {
 };
 
 export default function MilestoneForm({
-  studentId,
+  caseId,
 }: MilestoneFormProps) {
-  const [state, formAction, isPending] = useActionState(
+  const [
+    state,
+    formAction,
+    isPending,
+  ] = useActionState(
     createMilestone,
     initialState
   );
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form
+      action={formAction}
+      className="space-y-4"
+    >
       <input
         type="hidden"
-        name="student_id"
-        value={studentId}
+        name="case_id"
+        value={caseId}
       />
 
       <div>
@@ -98,13 +107,18 @@ export default function MilestoneForm({
             defaultValue="planned"
             className="w-full rounded-md border border-gray-300 bg-white px-3 py-2"
           >
-            <option value="planned">Planned</option>
+            <option value="planned">
+              Planned
+            </option>
+
             <option value="in_progress">
               In progress
             </option>
+
             <option value="completed">
               Completed
             </option>
+
             <option value="cancelled">
               Cancelled
             </option>
@@ -129,7 +143,9 @@ export default function MilestoneForm({
         disabled={isPending}
         className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
       >
-        {isPending ? "Adding..." : "Add milestone"}
+        {isPending
+          ? "Adding..."
+          : "Add milestone"}
       </button>
     </form>
   );

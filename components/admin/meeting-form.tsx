@@ -8,10 +8,10 @@ import {
 import {
   createMeeting,
   type PlanningActionState,
-} from "@/app/admin/students/[studentId]/actions";
+} from "@/app/admin/supervisions/[caseId]/actions";
 
 type MeetingFormProps = {
-  studentId: string;
+  caseId: string;
 };
 
 const initialState: PlanningActionState = {
@@ -20,28 +20,38 @@ const initialState: PlanningActionState = {
 };
 
 export default function MeetingForm({
-  studentId,
+  caseId,
 }: MeetingFormProps) {
-  const [localDateTime, setLocalDateTime] =
-    useState("");
+  const [
+    localDateTime,
+    setLocalDateTime,
+  ] = useState("");
 
-  const [state, formAction, isPending] =
-    useActionState(
-      createMeeting,
-      initialState
-    );
+  const [
+    state,
+    formAction,
+    isPending,
+  ] = useActionState(
+    createMeeting,
+    initialState
+  );
 
   const isoDateTime =
     localDateTime.length > 0
-      ? new Date(localDateTime).toISOString()
+      ? new Date(
+          localDateTime
+        ).toISOString()
       : "";
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form
+      action={formAction}
+      className="space-y-4"
+    >
       <input
         type="hidden"
-        name="student_id"
-        value={studentId}
+        name="case_id"
+        value={caseId}
       />
 
       <input
@@ -64,7 +74,9 @@ export default function MeetingForm({
           required
           value={localDateTime}
           onChange={(event) =>
-            setLocalDateTime(event.target.value)
+            setLocalDateTime(
+              event.target.value
+            )
           }
           className="w-full rounded-md border border-gray-300 px-3 py-2"
         />
@@ -101,10 +113,15 @@ export default function MeetingForm({
 
       <button
         type="submit"
-        disabled={isPending || !localDateTime}
+        disabled={
+          isPending ||
+          !localDateTime
+        }
         className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
       >
-        {isPending ? "Adding..." : "Add meeting"}
+        {isPending
+          ? "Adding..."
+          : "Add meeting"}
       </button>
     </form>
   );

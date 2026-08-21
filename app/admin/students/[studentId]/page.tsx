@@ -1,20 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import AdminSubmissionsSection from "@/components/admin/admin-submissions-section";
-import MeetingForm from "@/components/admin/meeting-form";
-import MilestoneForm from "@/components/admin/milestone-form";
 import StudentDetailsForm from "@/components/admin/student-details-form";
 
-import { SITE_CONFIG } from "@/lib/config/site";
-import { formatPortalDateTime } from "@/lib/datetime/format";
 import { createClient } from "@/lib/supabase/server";
-
-import {
-  deleteMeeting,
-  deleteMilestone,
-  updateMilestoneStatus,
-} from "./actions";
 
 type StudentPageProps = {
   params: Promise<{
@@ -43,24 +32,6 @@ function formatStudentStatus(
   }
 }
 
-function formatMilestoneStatus(
-  status: string
-) {
-  switch (status) {
-    case "in_progress":
-      return "In progress";
-
-    case "completed":
-      return "Completed";
-
-    case "cancelled":
-      return "Cancelled";
-
-    default:
-      return "Planned";
-  }
-}
-
 export default async function StudentPage({
   params,
 }: StudentPageProps) {
@@ -72,7 +43,7 @@ export default async function StudentPage({
     await createClient();
 
   // ============================================================
-  // STUDENT RECORD
+  // STUDENT
   // ============================================================
 
   const {
@@ -97,55 +68,12 @@ export default async function StudentPage({
   }
 
   // ============================================================
-  // SUPERVISION CASE
-  // ============================================================
-  //
-  // The route remains student-based for now:
-  //
-  // /admin/students/[studentId]
-  //
-  // But supervision content is now loaded through the student's
-  // current case:
-  //
-  // studentId -> case_members -> caseId
-  // ============================================================
-
-  const {
-    data: caseMembership,
-    error: caseMembershipError,
-  } = await supabase
-    .from("case_members")
-    .select("case_id")
-    .eq(
-      "student_id",
-      studentId
-    )
-    .single();
-
-  if (
-    caseMembershipError ||
-    !caseMembership
-  ) {
-    console.error(
-      caseMembershipError
-    );
-
-    throw new Error(
-      "Unable to load supervision case."
-    );
-  }
-
-  const caseId =
-    caseMembership.case_id;
-
-  // ============================================================
-  // PROFILE + SHARED SUPERVISION DATA
+  // PROFILE + CASE MEMBERSHIP
   // ============================================================
 
   const [
     profileResult,
-    milestonesResult,
-    meetingsResult,
+    membershipResult,
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -159,36 +87,15 @@ export default async function StudentPage({
       .single(),
 
     supabase
-      .from("milestones")
+      .from("case_members")
       .select(
-        "id, title, description, target_date, status, completed_at"
+        "case_id"
       )
       .eq(
-        "case_id",
-        caseId
+        "student_id",
+        student.id
       )
-      .order(
-        "target_date",
-        {
-          ascending: true,
-        }
-      ),
-
-    supabase
-      .from("meetings")
-      .select(
-        "id, scheduled_at, notes"
-      )
-      .eq(
-        "case_id",
-        caseId
-      )
-      .order(
-        "scheduled_at",
-        {
-          ascending: false,
-        }
-      ),
+      .single(),
   ]);
 
   if (
@@ -205,27 +112,54 @@ export default async function StudentPage({
   }
 
   if (
-    milestonesResult.error ||
-    meetingsResult.error
+    membershipResult.error ||
+    !membershipResult.data
   ) {
     console.error(
-      milestonesResult.error,
-      meetingsResult.error
+      membershipResult.error
     );
 
     throw new Error(
-      "Unable to load supervision information."
+      "Unable to load the student's supervision."
     );
   }
 
   const profile =
     profileResult.data;
 
-  const milestones =
-    milestonesResult.data ?? [];
+  const caseId =
+    membershipResult.data.case_id;
 
-  const meetings =
-    meetingsResult.data ?? [];
+  // ============================================================
+  // SUPERVISION CASE
+  // ============================================================
+
+  const {
+    data: supervisionCase,
+    error: caseError,
+  } = await supabase
+    .from("supervision_cases")
+    .select(
+      "id, title, case_type, status"
+    )
+    .eq(
+      "id",
+      caseId
+    )
+    .single();
+
+  if (
+    caseError ||
+    !supervisionCase
+  ) {
+    console.error(
+      caseError
+    );
+
+    throw new Error(
+      "Unable to load the supervision case."
+    );
+  }
 
   // ============================================================
   // RENDER
@@ -233,8 +167,6 @@ export default async function StudentPage({
 
   return (
     <div className="space-y-8">
-      {/* PAGE HEADER */}
-
       <div>
         <Link
           href="/admin/students"
@@ -246,15 +178,21 @@ export default async function StudentPage({
         <div className="mt-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-gray-950">
-              {profile.full_name}
+              {
+                profile.full_name
+              }
             </h1>
 
             <p className="mt-2 text-gray-600">
-              {student.programme}
+              {
+                student.programme
+              }
             </p>
 
             <p className="mt-1 text-sm text-gray-500">
-              {profile.email}
+              {
+                profile.email
+              }
             </p>
           </div>
 
@@ -274,8 +212,9 @@ export default async function StudentPage({
         </h2>
 
         <p className="mt-1 text-sm text-gray-500">
-          Programme, timetable and
-          overall supervision status.
+          Individual student
+          information and programme
+          record.
         </p>
 
         <div className="mt-6 max-w-3xl">
@@ -290,334 +229,52 @@ export default async function StudentPage({
         </div>
       </section>
 
-      {/* MILESTONES */}
+      {/* SUPERVISION */}
 
-      <section className="grid gap-6 lg:grid-cols-5">
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-3">
-          <h2 className="text-lg font-semibold text-gray-950">
-            Milestones
-          </h2>
+      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+          <div>
+            <p className="text-sm font-medium text-gray-500">
+              Supervision
+            </p>
 
-          <p className="mt-1 text-sm text-gray-500">
-            Shared planned outputs,
-            deadlines and progress
-            for this supervision.
-          </p>
-
-          <div className="mt-6">
-            {milestones.length ===
-            0 ? (
-              <p className="rounded-lg bg-gray-50 px-4 py-6 text-sm text-gray-500">
-                No milestones have
-                been added.
-              </p>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {milestones.map(
-                  (
-                    milestone
-                  ) => (
-                    <div
-                      key={
-                        milestone.id
-                      }
-                      className="py-5"
-                    >
-                      <div className="flex flex-col justify-between gap-4 sm:flex-row">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {
-                              milestone.title
-                            }
-                          </p>
-
-                          {milestone.description && (
-                            <p className="mt-1 whitespace-pre-wrap text-sm text-gray-600">
-                              {
-                                milestone.description
-                              }
-                            </p>
-                          )}
-
-                          <p className="mt-2 text-sm text-gray-500">
-                            Target:{" "}
-                            {
-                              milestone.target_date
-                            }
-                          </p>
-                        </div>
-
-                        <span className="h-fit rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
-                          {formatMilestoneStatus(
-                            milestone.status
-                          )}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {milestone.status !==
-                          "completed" && (
-                          <form
-                            action={
-                              updateMilestoneStatus
-                            }
-                          >
-                            <input
-                              type="hidden"
-                              name="milestone_id"
-                              value={
-                                milestone.id
-                              }
-                            />
-
-                            <input
-                              type="hidden"
-                              name="student_id"
-                              value={
-                                student.id
-                              }
-                            />
-
-                            <input
-                              type="hidden"
-                              name="status"
-                              value="completed"
-                            />
-
-                            <button
-                              type="submit"
-                              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                            >
-                              Mark completed
-                            </button>
-                          </form>
-                        )}
-
-                        {milestone.status ===
-                          "planned" && (
-                          <form
-                            action={
-                              updateMilestoneStatus
-                            }
-                          >
-                            <input
-                              type="hidden"
-                              name="milestone_id"
-                              value={
-                                milestone.id
-                              }
-                            />
-
-                            <input
-                              type="hidden"
-                              name="student_id"
-                              value={
-                                student.id
-                              }
-                            />
-
-                            <input
-                              type="hidden"
-                              name="status"
-                              value="in_progress"
-                            />
-
-                            <button
-                              type="submit"
-                              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                            >
-                              Start
-                            </button>
-                          </form>
-                        )}
-
-                        <form
-                          action={
-                            deleteMilestone
-                          }
-                        >
-                          <input
-                            type="hidden"
-                            name="milestone_id"
-                            value={
-                              milestone.id
-                            }
-                          />
-
-                          <input
-                            type="hidden"
-                            name="student_id"
-                            value={
-                              student.id
-                            }
-                          />
-
-                          <button
-                            type="submit"
-                            className="rounded-md px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
-                          >
-                            Delete
-                          </button>
-                        </form>
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ADD MILESTONE */}
-
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
-          <h2 className="text-lg font-semibold text-gray-950">
-            Add milestone
-          </h2>
-
-          <p className="mt-1 text-sm leading-6 text-gray-500">
-            The milestone will be
-            shared by all students in
-            this supervision case.
-          </p>
-
-          <div className="mt-6">
-            <MilestoneForm
-              studentId={
-                student.id
+            <h2 className="mt-1 text-xl font-semibold text-gray-950">
+              {
+                supervisionCase.title
               }
-            />
-          </div>
-        </div>
-      </section>
+            </h2>
 
-      {/* MEETINGS */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
+                {supervisionCase.case_type ===
+                "group"
+                  ? "Group supervision"
+                  : "Individual supervision"}
+              </span>
 
-      <section className="grid gap-6 lg:grid-cols-5">
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-3">
-          <h2 className="text-lg font-semibold text-gray-950">
-            Supervision meetings
-          </h2>
-
-          <p className="mt-1 text-sm text-gray-500">
-            Shared meetings and
-            supervision notes for
-            this supervision case.
-          </p>
-
-          <div className="mt-6">
-            {meetings.length ===
-            0 ? (
-              <p className="rounded-lg bg-gray-50 px-4 py-6 text-sm text-gray-500">
-                No meetings have been
-                recorded.
-              </p>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {meetings.map(
-                  (
-                    meeting
-                  ) => (
-                    <div
-                      key={
-                        meeting.id
-                      }
-                      className="py-5"
-                    >
-                      <p className="font-medium text-gray-900">
-                        {formatPortalDateTime(
-                          meeting.scheduled_at
-                        )}
-                      </p>
-
-                      {meeting.notes && (
-                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-600">
-                          {
-                            meeting.notes
-                          }
-                        </p>
-                      )}
-
-                      <form
-                        action={
-                          deleteMeeting
-                        }
-                        className="mt-3"
-                      >
-                        <input
-                          type="hidden"
-                          name="meeting_id"
-                          value={
-                            meeting.id
-                          }
-                        />
-
-                        <input
-                          type="hidden"
-                          name="student_id"
-                          value={
-                            student.id
-                          }
-                        />
-
-                        <button
-                          type="submit"
-                          className="text-xs font-medium text-red-700 hover:text-red-900"
-                        >
-                          Delete meeting
-                        </button>
-                      </form>
-                    </div>
-                  )
+              <span className="rounded-full border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600">
+                {formatStudentStatus(
+                  supervisionCase.status
                 )}
-              </div>
-            )}
+              </span>
+            </div>
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-500">
+              Submissions, feedback,
+              milestones and meetings
+              are managed in the
+              supervision workspace.
+            </p>
           </div>
-        </div>
 
-        {/* ADD MEETING */}
-
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
-          <h2 className="text-lg font-semibold text-gray-950">
-            Add meeting
-          </h2>
-
-          <p className="mt-2 text-sm leading-6 text-gray-500">
-            Meetings are booked
-            through SavvyCal. Add the
-            confirmed meeting here
-            to maintain the shared
-            supervision record.
-          </p>
-
-          <a
-            href={
-              SITE_CONFIG.savvyCalUrl
-            }
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-block text-sm font-medium text-gray-700 hover:text-gray-950"
+          <Link
+            href={`/admin/supervisions/${caseId}`}
+            className="h-fit rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
           >
-            Open SavvyCal ↗
-          </a>
-
-          <div className="mt-6">
-            <MeetingForm
-              studentId={
-                student.id
-              }
-            />
-          </div>
+            Open supervision
+          </Link>
         </div>
       </section>
-
-      {/* SHARED SUBMISSIONS */}
-
-      <AdminSubmissionsSection
-        studentId={
-          student.id
-        }
-      />
     </div>
   );
 }

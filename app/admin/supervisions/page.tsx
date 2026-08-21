@@ -501,12 +501,21 @@ export default async function AdminSupervisionsPage() {
                         </p>
                       </div>
 
-                      <Link
-                        href={`/admin/supervisions/${supervisionCase.id}/edit`}
-                        className="h-fit rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        Edit
-                      </Link>
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/admin/supervisions/${supervisionCase.id}`}
+                          className="h-fit rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                        >
+                          Open workspace
+                        </Link>
+                        
+                        <Link
+                          href={`/admin/supervisions/${supervisionCase.id}/edit`}
+                          className="h-fit rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          Edit configuration
+                        </Link>
+                      </div>
                     </div>
 
                     {/* STUDENTS */}

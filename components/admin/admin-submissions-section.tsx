@@ -7,7 +7,7 @@ import { formatPortalDateTime } from "@/lib/datetime/format";
 import { createClient } from "@/lib/supabase/server";
 
 type AdminSubmissionsSectionProps = {
-  studentId: string;
+  caseId: string;
 };
 
 const SUPERVISOR_EMAIL =
@@ -36,43 +36,45 @@ function formatBytes(
   ).toFixed(1)} MB`;
 }
 
+function getProfileLabel(
+  profile:
+    | {
+        email: string | null;
+        role: string;
+      }
+    | undefined
+) {
+  if (!profile) {
+    return null;
+  }
+
+  if (
+    profile.email?.toLowerCase() ===
+    SUPERVISOR_EMAIL.toLowerCase()
+  ) {
+    return "supervisor";
+  }
+
+  if (
+    profile.role === "admin"
+  ) {
+    return "staff";
+  }
+
+  if (
+    profile.role === "student"
+  ) {
+    return "student";
+  }
+
+  return null;
+}
+
 export default async function AdminSubmissionsSection({
-  studentId,
+  caseId,
 }: AdminSubmissionsSectionProps) {
   const supabase =
     await createClient();
-
-  // ============================================================
-  // RESOLVE STUDENT -> SUPERVISION CASE
-  // ============================================================
-
-  const {
-    data: membership,
-    error: membershipError,
-  } = await supabase
-    .from("case_members")
-    .select("case_id")
-    .eq(
-      "student_id",
-      studentId
-    )
-    .single();
-
-  if (
-    membershipError ||
-    !membership
-  ) {
-    console.error(
-      membershipError
-    );
-
-    throw new Error(
-      "Unable to resolve the student's supervision case."
-    );
-  }
-
-  const caseId =
-    membership.case_id;
 
   // ============================================================
   // CASE SUBMISSIONS
@@ -109,79 +111,20 @@ export default async function AdminSubmissionsSection({
     );
   }
 
-  // ============================================================
-  // UPLOADERS
-  // ============================================================
-
-  const uploaderIds = [
-    ...new Set(
-      (submissions ?? []).map(
-        (submission) =>
-          submission.uploaded_by
-      )
-    ),
-  ];
-
-  let uploaderProfiles: {
-    id: string;
-    full_name: string;
-    email: string | null;
-    role: string;
-  }[] = [];
-
-  if (
-    uploaderIds.length > 0
-  ) {
-    const {
-      data,
-      error,
-    } = await supabase
-      .from("profiles")
-      .select(
-        "id, full_name, email, role"
-      )
-      .in(
-        "id",
-        uploaderIds
-      );
-
-    if (error) {
-      console.error(
-        error
-      );
-
-      throw new Error(
-        "Unable to load submission uploader information."
-      );
-    }
-
-    uploaderProfiles =
-      data ?? [];
-  }
-
-  const uploaderMap =
-    new Map(
-      uploaderProfiles.map(
-        (profile) => [
-          profile.id,
-          profile,
-        ]
-      )
-    );
-
-  // ============================================================
-  // FEEDBACK
-  // ============================================================
-
   const submissionIds =
     (submissions ?? []).map(
       (submission) =>
         submission.id
     );
 
+  // ============================================================
+  // FEEDBACK
+  // ============================================================
+
   let feedback: {
     id: string;
     submission_id: string;
+    author_id: string;
     feedback_text: string;
     created_at: string;
   }[] = [];
@@ -195,7 +138,7 @@ export default async function AdminSubmissionsSection({
     } = await supabase
       .from("feedback")
       .select(
-        "id, submission_id, feedback_text, created_at"
+        "id, submission_id, author_id, feedback_text, created_at"
       )
       .in(
         "submission_id",
@@ -221,6 +164,80 @@ export default async function AdminSubmissionsSection({
     feedback =
       data ?? [];
   }
+
+  // ============================================================
+  // RELEVANT PROFILES
+  // ============================================================
+
+  const uploaderIds =
+    (submissions ?? []).map(
+      (submission) =>
+        submission.uploaded_by
+    );
+
+  const feedbackAuthorIds =
+    feedback.map(
+      (item) =>
+        item.author_id
+    );
+
+  const profileIds = [
+    ...new Set([
+      ...uploaderIds,
+      ...feedbackAuthorIds,
+    ]),
+  ];
+
+  let relevantProfiles: {
+    id: string;
+    full_name: string;
+    email: string | null;
+    role: string;
+  }[] = [];
+
+  if (
+    profileIds.length > 0
+  ) {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("profiles")
+      .select(
+        "id, full_name, email, role"
+      )
+      .in(
+        "id",
+        profileIds
+      );
+
+    if (error) {
+      console.error(
+        error
+      );
+
+      throw new Error(
+        "Unable to load submission participant information."
+      );
+    }
+
+    relevantProfiles =
+      data ?? [];
+  }
+
+  const profileMap =
+    new Map(
+      relevantProfiles.map(
+        (profile) => [
+          profile.id,
+          profile,
+        ]
+      )
+    );
+
+  // ============================================================
+  // FEEDBACK MAP
+  // ============================================================
 
   const feedbackMap =
     new Map<
@@ -281,21 +298,14 @@ export default async function AdminSubmissionsSection({
                     ) ?? [];
 
                   const uploader =
-                    uploaderMap.get(
+                    profileMap.get(
                       submission.uploaded_by
                     );
 
                   const uploaderLabel =
-                    uploader?.email?.toLowerCase() ===
-                    SUPERVISOR_EMAIL.toLowerCase()
-                      ? "supervisor"
-                      : uploader?.role ===
-                          "admin"
-                        ? "staff"
-                        : uploader?.role ===
-                            "student"
-                          ? "student"
-                          : null;
+                    getProfileLabel(
+                      uploader
+                    );
 
                   return (
                     <article
@@ -373,35 +383,56 @@ export default async function AdminSubmissionsSection({
                         ) : (
                           <div className="mt-3 space-y-3">
                             {items.map(
-                              (
-                                item
-                              ) => (
-                                <div
-                                  key={
-                                    item.id
-                                  }
-                                  className="rounded-md bg-gray-50 p-4"
-                                >
-                                  <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
-                                    {
-                                      item.feedback_text
-                                    }
-                                  </p>
+                              (item) => {
+                                const author =
+                                  profileMap.get(
+                                    item.author_id
+                                  );
 
-                                  <p className="mt-2 text-xs text-gray-500">
-                                    {formatPortalDateTime(
-                                      item.created_at
-                                    )}
-                                  </p>
-                                </div>
-                              )
+                                const authorLabel =
+                                  getProfileLabel(
+                                    author
+                                  );
+
+                                return (
+                                  <div
+                                    key={
+                                      item.id
+                                    }
+                                    className="rounded-md bg-gray-50 p-4"
+                                  >
+                                    <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                                      {
+                                        item.feedback_text
+                                      }
+                                    </p>
+
+                                    <div className="mt-3 border-t border-gray-200 pt-2">
+                                      <p className="text-xs font-medium text-gray-700">
+                                        {author?.full_name ??
+                                          "Unknown author"}
+
+                                        {authorLabel
+                                          ? ` (${authorLabel})`
+                                          : ""}
+                                      </p>
+
+                                      <p className="mt-1 text-xs text-gray-500">
+                                        {formatPortalDateTime(
+                                          item.created_at
+                                        )}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              }
                             )}
                           </div>
                         )}
 
                         <FeedbackForm
-                          studentId={
-                            studentId
+                          caseId={
+                            caseId
                           }
                           submissionId={
                             submission.id
@@ -419,7 +450,7 @@ export default async function AdminSubmissionsSection({
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
         <h2 className="text-lg font-semibold text-gray-950">
-          Upload on behalf of student
+          Upload submission
         </h2>
 
         <p className="mt-1 text-sm leading-6 text-gray-500">

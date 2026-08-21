@@ -40,6 +40,43 @@ function formatStatus(status: string) {
   }
 }
 
+function formatMilestoneStatus(status: string) {
+  switch (status) {
+    case "in_progress":
+      return "In progress";
+
+    case "completed":
+      return "Completed";
+
+    case "cancelled":
+      return "Cancelled";
+
+    default:
+      return "Planned";
+  }
+}
+
+function formatCaseType(caseType: string) {
+  return caseType === "group"
+    ? "Group supervision"
+    : "Individual supervision";
+}
+
+function formatStaffRole(
+  staffRole: string | null
+) {
+  return staffRole === "supervisor"
+    ? "Supervisor"
+    : "Staff";
+}
+
+type CasePerson = {
+  profile_id: string;
+  full_name: string;
+  participant_type: string;
+  staff_role: string | null;
+};
+
 export default async function StudentPage() {
   const supabase = await createClient();
 
@@ -141,7 +178,7 @@ export default async function StudentPage() {
   }
 
   // ============================================================
-  // SUPERVISION CASE
+  // SUPERVISION CASE MEMBERSHIP
   // ============================================================
 
   const {
@@ -173,21 +210,35 @@ export default async function StudentPage() {
     caseMembership.case_id;
 
   // ============================================================
-  // SUPERVISION DATA
-  // ============================================================
-  //
-  // C4.2:
-  // Submissions are now loaded at CASE level.
-  //
-  // Milestones and meetings remain student-based temporarily.
-  // They will move to case_id in C4.3.
+  // CASE + SHARED SUPERVISION DATA
   // ============================================================
 
   const [
+    supervisionCaseResult,
+    casePeopleResult,
     submissionsResult,
     milestonesResult,
     meetingsResult,
   ] = await Promise.all([
+    supabase
+      .from("supervision_cases")
+      .select(
+        "id, title, case_type, programme, start_date, target_completion_date, status"
+      )
+      .eq(
+        "id",
+        caseId
+      )
+      .single(),
+
+    supabase.rpc(
+      "get_case_people",
+      {
+        p_case_id:
+          caseId,
+      }
+    ),
+
     supabase
       .from("submissions")
       .select(
@@ -238,11 +289,16 @@ export default async function StudentPage() {
   ]);
 
   if (
+    supervisionCaseResult.error ||
+    !supervisionCaseResult.data ||
+    casePeopleResult.error ||
     submissionsResult.error ||
     milestonesResult.error ||
     meetingsResult.error
   ) {
     console.error(
+      supervisionCaseResult.error,
+      casePeopleResult.error,
       submissionsResult.error,
       milestonesResult.error,
       meetingsResult.error
@@ -253,8 +309,49 @@ export default async function StudentPage() {
     );
   }
 
+  const supervisionCase =
+    supervisionCaseResult.data;
+
+  const casePeople =
+    (casePeopleResult.data ??
+      []) as CasePerson[];
+
   const submissions =
     submissionsResult.data ?? [];
+
+  const milestones =
+    milestonesResult.data ?? [];
+
+  const meetings =
+    meetingsResult.data ?? [];
+
+  // ============================================================
+  // CASE PEOPLE
+  // ============================================================
+
+  const caseStudents =
+    casePeople.filter(
+      (person) =>
+        person.participant_type ===
+        "student"
+    );
+
+  const caseStaff =
+    casePeople.filter(
+      (person) =>
+        person.participant_type ===
+        "staff"
+    );
+
+  const personMap =
+    new Map(
+      casePeople.map(
+        (person) => [
+          person.profile_id,
+          person,
+        ]
+      )
+    );
 
   // ============================================================
   // FEEDBACK
@@ -269,6 +366,7 @@ export default async function StudentPage() {
   let feedback: {
     id: string;
     submission_id: string;
+    author_id: string;
     feedback_text: string;
     created_at: string;
   }[] = [];
@@ -282,7 +380,7 @@ export default async function StudentPage() {
     } = await supabase
       .from("feedback")
       .select(
-        "id, submission_id, feedback_text, created_at"
+        "id, submission_id, author_id, feedback_text, created_at"
       )
       .in(
         "submission_id",
@@ -346,23 +444,157 @@ export default async function StudentPage() {
       />
 
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-6 py-8">
-        {/* STUDENT OVERVIEW */}
+        {/* SUPERVISION OVERVIEW */}
 
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-gray-950">
-            {profile.full_name}
-          </h1>
+        <section>
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-medium text-gray-500">
+                Your supervision
+              </p>
 
-          <p className="mt-2 text-gray-600">
-            {student.programme}
-          </p>
+              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-gray-950">
+                {
+                  supervisionCase.title
+                }
+              </h1>
 
-          <span className="mt-3 inline-flex rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
-            {formatStatus(
-              student.status
-            )}
-          </span>
-        </div>
+              <p className="mt-2 text-gray-600">
+                {supervisionCase.programme ??
+                  student.programme}
+              </p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="inline-flex rounded-full bg-gray-900 px-3 py-1 text-sm font-medium text-white">
+                  {formatCaseType(
+                    supervisionCase.case_type
+                  )}
+                </span>
+
+                <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
+                  {formatStatus(
+                    supervisionCase.status
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div className="text-sm text-gray-500 sm:text-right">
+              <p>
+                Signed in as{" "}
+                <span className="font-medium text-gray-700">
+                  {
+                    profile.full_name
+                  }
+                </span>
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* CASE PARTICIPANTS */}
+
+        <section className="grid gap-6 lg:grid-cols-2">
+          {/* STUDENTS */}
+
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-950">
+              {supervisionCase.case_type ===
+              "group"
+                ? "Students"
+                : "Student"}
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              {supervisionCase.case_type ===
+              "group"
+                ? "Students participating in this supervision."
+                : "Student participating in this supervision."}
+            </p>
+
+            <div className="mt-5 space-y-3">
+              {caseStudents.length ===
+              0 ? (
+                <p className="text-sm text-gray-500">
+                  No students are
+                  currently assigned.
+                </p>
+              ) : (
+                caseStudents.map(
+                  (person) => (
+                    <div
+                      key={
+                        person.profile_id
+                      }
+                      className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3"
+                    >
+                      <p className="font-medium text-gray-900">
+                        {
+                          person.full_name
+                        }
+                      </p>
+
+                      {person.profile_id ===
+                        userId && (
+                        <span className="text-xs font-medium text-gray-500">
+                          You
+                        </span>
+                      )}
+                    </div>
+                  )
+                )
+              )}
+            </div>
+          </div>
+
+          {/* SUPERVISION TEAM */}
+
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-950">
+              Supervision team
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Supervisor and staff
+              assigned to this
+              supervision.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              {caseStaff.length ===
+              0 ? (
+                <p className="text-sm text-gray-500">
+                  No supervision
+                  staff are currently
+                  assigned.
+                </p>
+              ) : (
+                caseStaff.map(
+                  (person) => (
+                    <div
+                      key={
+                        person.profile_id
+                      }
+                      className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3"
+                    >
+                      <p className="font-medium text-gray-900">
+                        {
+                          person.full_name
+                        }
+                      </p>
+
+                      <span className="text-xs font-medium text-gray-500">
+                        {formatStaffRole(
+                          person.staff_role
+                        )}
+                      </span>
+                    </div>
+                  )
+                )
+              )}
+            </div>
+          </div>
+        </section>
 
         {/* SUBMISSIONS */}
 
@@ -392,6 +624,11 @@ export default async function StudentPage() {
                       feedbackMap.get(
                         submission.id
                       ) ?? [];
+
+                    const uploader =
+                      personMap.get(
+                        submission.uploaded_by
+                      );
 
                     const uploadedByCurrentUser =
                       submission.uploaded_by ===
@@ -438,9 +675,15 @@ export default async function StudentPage() {
                             </p>
 
                             <p className="mt-1 text-xs text-gray-500">
+                              Uploaded by{" "}
+                              <span className="font-medium text-gray-700">
+                                {uploader?.full_name ??
+                                  "Unknown participant"}
+                              </span>
+
                               {uploadedByCurrentUser
-                                ? "Uploaded by you"
-                                : "Uploaded by another case participant"}
+                                ? " (you)"
+                                : ""}
                             </p>
                           </div>
 
@@ -451,6 +694,8 @@ export default async function StudentPage() {
                             Download
                           </Link>
                         </div>
+
+                        {/* FEEDBACK */}
 
                         <div className="mt-5 border-t border-gray-100 pt-5">
                           <h4 className="text-sm font-semibold text-gray-900">
@@ -468,26 +713,47 @@ export default async function StudentPage() {
                               {items.map(
                                 (
                                   item
-                                ) => (
-                                  <div
-                                    key={
-                                      item.id
-                                    }
-                                    className="rounded-md bg-gray-50 p-4"
-                                  >
-                                    <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
-                                      {
-                                        item.feedback_text
-                                      }
-                                    </p>
+                                ) => {
+                                  const author =
+                                    personMap.get(
+                                      item.author_id
+                                    );
 
-                                    <p className="mt-2 text-xs text-gray-500">
-                                      {formatPortalDateTime(
-                                        item.created_at
-                                      )}
-                                    </p>
-                                  </div>
-                                )
+                                  return (
+                                    <div
+                                      key={
+                                        item.id
+                                      }
+                                      className="rounded-md bg-gray-50 p-4"
+                                    >
+                                      <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                                        {
+                                          item.feedback_text
+                                        }
+                                      </p>
+
+                                      <div className="mt-3 border-t border-gray-200 pt-2">
+                                        <p className="text-xs font-medium text-gray-700">
+                                          {author?.full_name ??
+                                            "Unknown author"}
+
+                                          {author?.participant_type ===
+                                          "staff"
+                                            ? ` (${formatStaffRole(
+                                                author.staff_role
+                                              ).toLowerCase()})`
+                                            : ""}
+                                        </p>
+
+                                        <p className="mt-1 text-xs text-gray-500">
+                                          {formatPortalDateTime(
+                                            item.created_at
+                                          )}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                }
                               )}
                             </div>
                           )}
@@ -533,19 +799,20 @@ export default async function StudentPage() {
               Milestones
             </h2>
 
+            <p className="mt-1 text-sm text-gray-500">
+              Shared deadlines and
+              planned outputs for
+              this supervision.
+            </p>
+
             <div className="mt-5 space-y-4">
-              {(
-                milestonesResult.data ??
-                []
-              ).length === 0 ? (
+              {milestones.length ===
+              0 ? (
                 <p className="text-sm text-gray-500">
                   No milestones.
                 </p>
               ) : (
-                (
-                  milestonesResult.data ??
-                  []
-                ).map(
+                milestones.map(
                   (milestone) => (
                     <div
                       key={
@@ -553,20 +820,24 @@ export default async function StudentPage() {
                       }
                       className="border-b border-gray-100 pb-4 last:border-0"
                     >
-                      <p className="font-medium text-gray-900">
-                        {
-                          milestone.title
-                        }
-                      </p>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-medium text-gray-900">
+                          {
+                            milestone.title
+                          }
+                        </p>
+
+                        <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
+                          {formatMilestoneStatus(
+                            milestone.status
+                          )}
+                        </span>
+                      </div>
 
                       <p className="mt-1 text-sm text-gray-500">
                         Target:{" "}
                         {
                           milestone.target_date
-                        }{" "}
-                        ·{" "}
-                        {
-                          milestone.status
                         }
                       </p>
 
@@ -616,18 +887,14 @@ export default async function StudentPage() {
             </div>
 
             <div className="mt-5 space-y-4">
-              {(
-                meetingsResult.data ??
-                []
-              ).length === 0 ? (
+              {meetings.length ===
+              0 ? (
                 <p className="text-sm text-gray-500">
-                  No meetings recorded.
+                  No meetings
+                  recorded.
                 </p>
               ) : (
-                (
-                  meetingsResult.data ??
-                  []
-                ).map(
+                meetings.map(
                   (meeting) => (
                     <div
                       key={
