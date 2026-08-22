@@ -17,7 +17,7 @@
 - Added production Supabase Auth configuration and verified the invitation, onboarding, login, and redirect flows.
 - Added personalised site metadata, favicon, footer, and portal branding.
 - Completed production smoke testing for supervisor, staff, student, and private-storage workflows.
-Adopted release codenames generated with the [OCPSG Benchmarking LLMs Release Name Generator](https://ocpsg-benchmarking-llms.github.io/release-name-generator/).
+- Adopted release codenames generated with the [OCPSG Benchmarking LLMs Release Name Generator](https://ocpsg-benchmarking-llms.github.io/release-name-generator/).
 
 ### Code changes
 
