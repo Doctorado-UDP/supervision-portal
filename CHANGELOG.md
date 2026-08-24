@@ -4,7 +4,7 @@
 
 ### Summary
 
-- Added full editing for supervision milestones, including title, description, target date, and status.
+- Added full editing for supervision milestones, including title, description, target date, and status, with the latest target dates shown first.
 - Added full editing for supervision meetings, including date/time and notes.
 - Added an `original_date` field for submissions alongside the editable submission timestamp.
 - Changed submission ordering to use `original_date` descending, with the submission timestamp as a secondary sort key.

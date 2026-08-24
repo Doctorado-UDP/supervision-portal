@@ -63,7 +63,7 @@ export default async function SupervisionPage({ params }: SupervisionPageProps) 
         .from("milestones")
         .select("id, title, description, target_date, status, completed_at")
         .eq("case_id", caseId)
-        .order("target_date", { ascending: true }),
+        .order("target_date", { ascending: false }),
       supabase
         .from("meetings")
         .select("id, scheduled_at, notes, created_by")

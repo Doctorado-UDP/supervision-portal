@@ -132,7 +132,7 @@ export default async function StudentPage() {
       .from("milestones")
       .select("id, title, description, target_date, status")
       .eq("case_id", caseId)
-      .order("target_date", { ascending: true }),
+      .order("target_date", { ascending: false }),
     supabase
       .from("meetings")
       .select("id, scheduled_at, notes")
