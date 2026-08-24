@@ -1,5 +1,52 @@
 # CHANGELOG
 
+## v0.1.0-beta.2 "Lunar Maple"
+
+### Summary
+
+- Added full editing for supervision milestones, including title, description, target date, and status, with the latest target dates shown first.
+- Added full editing for supervision meetings, including date/time and notes.
+- Added an `original_date` field for submissions alongside the editable submission timestamp.
+- Changed submission ordering to use `original_date` descending, with the submission timestamp as a secondary sort key.
+- Added original-date display to supervisor and student submission views.
+- Restricted submission date editing to the primary/global supervisor while preserving existing student and assigned-staff upload/read permissions.
+- Added database migrations to backfill existing submission original dates, index the new ordering fields, and align future defaults with the portal's Santiago calendar date.
+- Hardened production configuration by pinning Node.js 24 and aligning local Supabase Auth settings with the invitation-only production setup.
+
+### Code changes
+
+`planning and meetings`
+
+- Added inline milestone editing without removing the existing status shortcuts or delete workflow.
+- Added inline meeting editing for scheduled date/time and notes.
+- Revalidated supervisor, timetable, supervision, and student views after planning-record updates.
+
+`submissions`
+
+- Added the non-null `original_date` column to `public.submissions`.
+- Backfilled existing records from their submission timestamp using the portal's Santiago time zone.
+- Added global-supervisor-only update permission for submission metadata.
+- Added editing controls for original date and submission timestamp in the supervisor view.
+- Ordered submissions by newest original date first in both supervisor and student views.
+- Retained the submission timestamp as a secondary ordering key when original dates are equal.
+
+`database and infrastructure`
+
+- Added migration `20260824170000_add_submission_original_date.sql`.
+- Added migration `20260824171128_fix_submission_original_date_default.sql` to align new submission defaults with the Santiago calendar date.
+- Added an index on `case_id`, `original_date`, and `submitted_at` for submission ordering.
+- Pinned the application runtime to Node.js 24 through `.nvmrc` and `package.json`.
+- Updated local Supabase Auth configuration to mirror the invitation-only production configuration and minimum password requirements.
+
+### Notes
+
+- Existing submissions receive an `original_date` derived from their previous submission timestamp during migration.
+- New submissions default `original_date` to the current Santiago date and can subsequently be corrected by the primary/global supervisor.
+- Submission files, feedback, versioning, private downloads, and case-scoped access controls are otherwise unchanged.
+- The portal remains invitation-only.
+
+---
+
 ## v0.1.0-beta.1 "Winter Fjord"
 
 ### Summary

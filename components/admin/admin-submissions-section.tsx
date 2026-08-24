@@ -1,8 +1,13 @@
 import Link from "next/link";
 
 import FeedbackForm from "@/components/admin/feedback-form";
+import SubmissionEditForm from "@/components/admin/submission-edit-form";
 import SubmissionUploadForm from "@/components/submissions/submission-upload-form";
 
+import {
+  isGlobalSupervisor,
+  requireAdmin,
+} from "@/lib/auth/require-admin";
 import { formatPortalDateTime } from "@/lib/datetime/format";
 import { createClient } from "@/lib/supabase/server";
 
@@ -10,75 +15,36 @@ type AdminSubmissionsSectionProps = {
   caseId: string;
 };
 
-const SUPERVISOR_EMAIL =
-  "bastian.gonzalez.b@mail.udp.cl";
+const SUPERVISOR_EMAIL = "bastian.gonzalez.b@mail.udp.cl";
 
-function formatBytes(
-  bytes: number
-) {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-
-  if (
-    bytes <
-    1024 * 1024
-  ) {
-    return `${(
-      bytes / 1024
-    ).toFixed(1)} KB`;
-  }
-
-  return `${(
-    bytes /
-    1024 /
-    1024
-  ).toFixed(1)} MB`;
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function getProfileLabel(
   profile:
-    | {
-        email: string | null;
-        role: string;
-      }
+    | { email: string | null; role: string }
     | undefined
 ) {
-  if (!profile) {
-    return null;
-  }
+  if (!profile) return null;
 
-  if (
-    profile.email?.toLowerCase() ===
-    SUPERVISOR_EMAIL.toLowerCase()
-  ) {
+  if (profile.email?.toLowerCase() === SUPERVISOR_EMAIL.toLowerCase()) {
     return "supervisor";
   }
 
-  if (
-    profile.role === "admin"
-  ) {
-    return "staff";
-  }
-
-  if (
-    profile.role === "student"
-  ) {
-    return "student";
-  }
-
+  if (profile.role === "admin") return "staff";
+  if (profile.role === "student") return "student";
   return null;
 }
 
 export default async function AdminSubmissionsSection({
   caseId,
 }: AdminSubmissionsSectionProps) {
-  const supabase =
-    await createClient();
-
-  // ============================================================
-  // CASE SUBMISSIONS
-  // ============================================================
+  const admin = await requireAdmin();
+  const canEditSubmissionDates = isGlobalSupervisor(admin);
+  const supabase = await createClient();
 
   const {
     data: submissions,
@@ -86,40 +52,18 @@ export default async function AdminSubmissionsSection({
   } = await supabase
     .from("submissions")
     .select(
-      "id, title, version, file_name, file_size_bytes, submitted_at, uploaded_by"
+      "id, title, version, file_name, file_size_bytes, submitted_at, original_date, uploaded_by"
     )
-    .eq(
-      "case_id",
-      caseId
-    )
-    .order(
-      "submitted_at",
-      {
-        ascending: false,
-      }
-    );
+    .eq("case_id", caseId)
+    .order("original_date", { ascending: false })
+    .order("submitted_at", { ascending: false });
 
-  if (
-    submissionsError
-  ) {
-    console.error(
-      submissionsError
-    );
-
-    throw new Error(
-      "Unable to load submissions."
-    );
+  if (submissionsError) {
+    console.error(submissionsError);
+    throw new Error("Unable to load submissions.");
   }
 
-  const submissionIds =
-    (submissions ?? []).map(
-      (submission) =>
-        submission.id
-    );
-
-  // ============================================================
-  // FEEDBACK
-  // ============================================================
+  const submissionIds = (submissions ?? []).map((submission) => submission.id);
 
   let feedback: {
     id: string;
@@ -129,62 +73,25 @@ export default async function AdminSubmissionsSection({
     created_at: string;
   }[] = [];
 
-  if (
-    submissionIds.length > 0
-  ) {
-    const {
-      data,
-      error,
-    } = await supabase
+  if (submissionIds.length > 0) {
+    const { data, error } = await supabase
       .from("feedback")
-      .select(
-        "id, submission_id, author_id, feedback_text, created_at"
-      )
-      .in(
-        "submission_id",
-        submissionIds
-      )
-      .order(
-        "created_at",
-        {
-          ascending: true,
-        }
-      );
+      .select("id, submission_id, author_id, feedback_text, created_at")
+      .in("submission_id", submissionIds)
+      .order("created_at", { ascending: true });
 
     if (error) {
-      console.error(
-        error
-      );
-
-      throw new Error(
-        "Unable to load submission feedback."
-      );
+      console.error(error);
+      throw new Error("Unable to load submission feedback.");
     }
 
-    feedback =
-      data ?? [];
+    feedback = data ?? [];
   }
-
-  // ============================================================
-  // RELEVANT PROFILES
-  // ============================================================
-
-  const uploaderIds =
-    (submissions ?? []).map(
-      (submission) =>
-        submission.uploaded_by
-    );
-
-  const feedbackAuthorIds =
-    feedback.map(
-      (item) =>
-        item.author_id
-    );
 
   const profileIds = [
     ...new Set([
-      ...uploaderIds,
-      ...feedbackAuthorIds,
+      ...(submissions ?? []).map((submission) => submission.uploaded_by),
+      ...feedback.map((item) => item.author_id),
     ]),
   ];
 
@@ -195,77 +102,31 @@ export default async function AdminSubmissionsSection({
     role: string;
   }[] = [];
 
-  if (
-    profileIds.length > 0
-  ) {
-    const {
-      data,
-      error,
-    } = await supabase
+  if (profileIds.length > 0) {
+    const { data, error } = await supabase
       .from("profiles")
-      .select(
-        "id, full_name, email, role"
-      )
-      .in(
-        "id",
-        profileIds
-      );
+      .select("id, full_name, email, role")
+      .in("id", profileIds);
 
     if (error) {
-      console.error(
-        error
-      );
-
-      throw new Error(
-        "Unable to load submission participant information."
-      );
+      console.error(error);
+      throw new Error("Unable to load submission participant information.");
     }
 
-    relevantProfiles =
-      data ?? [];
+    relevantProfiles = data ?? [];
   }
 
-  const profileMap =
-    new Map(
-      relevantProfiles.map(
-        (profile) => [
-          profile.id,
-          profile,
-        ]
-      )
-    );
+  const profileMap = new Map(
+    relevantProfiles.map((profile) => [profile.id, profile])
+  );
 
-  // ============================================================
-  // FEEDBACK MAP
-  // ============================================================
+  const feedbackMap = new Map<string, typeof feedback>();
 
-  const feedbackMap =
-    new Map<
-      string,
-      typeof feedback
-    >();
-
-  for (
-    const item of feedback
-  ) {
-    const existing =
-      feedbackMap.get(
-        item.submission_id
-      ) ?? [];
-
-    existing.push(
-      item
-    );
-
-    feedbackMap.set(
-      item.submission_id,
-      existing
-    );
+  for (const item of feedback) {
+    const existing = feedbackMap.get(item.submission_id) ?? [];
+    existing.push(item);
+    feedbackMap.set(item.submission_id, existing);
   }
-
-  // ============================================================
-  // RENDER
-  // ============================================================
 
   return (
     <section className="grid gap-6 lg:grid-cols-5">
@@ -275,174 +136,121 @@ export default async function AdminSubmissionsSection({
         </h2>
 
         <p className="mt-1 text-sm text-gray-500">
-          Versioned documents shared
-          within this supervision
-          case.
+          Versioned documents shared within this supervision case, ordered by
+          original date with the most recent first.
         </p>
 
         <div className="mt-6">
-          {!submissions ||
-          submissions.length ===
-            0 ? (
+          {!submissions || submissions.length === 0 ? (
             <p className="rounded-lg bg-gray-50 px-4 py-6 text-sm text-gray-500">
-              No submissions have
-              been uploaded.
+              No submissions have been uploaded.
             </p>
           ) : (
             <div className="space-y-6">
-              {submissions.map(
-                (submission) => {
-                  const items =
-                    feedbackMap.get(
-                      submission.id
-                    ) ?? [];
+              {submissions.map((submission) => {
+                const items = feedbackMap.get(submission.id) ?? [];
+                const uploader = profileMap.get(submission.uploaded_by);
+                const uploaderLabel = getProfileLabel(uploader);
 
-                  const uploader =
-                    profileMap.get(
-                      submission.uploaded_by
-                    );
-
-                  const uploaderLabel =
-                    getProfileLabel(
-                      uploader
-                    );
-
-                  return (
-                    <article
-                      key={
-                        submission.id
-                      }
-                      className="rounded-lg border border-gray-200 p-5"
-                    >
-                      <div className="flex flex-col justify-between gap-4 sm:flex-row">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-semibold text-gray-900">
-                              {
-                                submission.title
-                              }
-                            </h3>
-
-                            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
-                              Version{" "}
-                              {
-                                submission.version
-                              }
-                            </span>
-                          </div>
-
-                          <p className="mt-2 text-sm text-gray-600">
-                            {
-                              submission.file_name
-                            }{" "}
-                            ·{" "}
-                            {formatBytes(
-                              Number(
-                                submission.file_size_bytes
-                              )
-                            )}
-                          </p>
-
-                          <p className="mt-1 text-xs text-gray-500">
-                            Uploaded{" "}
-                            {formatPortalDateTime(
-                              submission.submitted_at
-                            )}
-                          </p>
-
-                          <p className="mt-1 text-xs text-gray-500">
-                            Uploaded by{" "}
-                            {uploader?.full_name ??
-                              "Unknown user"}
-
-                            {uploaderLabel
-                              ? ` (${uploaderLabel})`
-                              : ""}
-                          </p>
+                return (
+                  <article
+                    key={submission.id}
+                    className="rounded-lg border border-gray-200 p-5"
+                  >
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-semibold text-gray-900">
+                            {submission.title}
+                          </h3>
+                          <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
+                            Version {submission.version}
+                          </span>
                         </div>
 
-                        <Link
-                          href={`/submissions/${submission.id}/download`}
-                          className="h-fit rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                          Download
-                        </Link>
-                      </div>
+                        <p className="mt-2 text-sm text-gray-600">
+                          {submission.file_name} · {formatBytes(Number(submission.file_size_bytes))}
+                        </p>
 
-                      <div className="mt-5 border-t border-gray-100 pt-5">
-                        <h4 className="text-sm font-semibold text-gray-900">
-                          Feedback
-                        </h4>
+                        <p className="mt-1 text-xs font-medium text-gray-600">
+                          Original date: {submission.original_date}
+                        </p>
 
-                        {items.length ===
-                        0 ? (
-                          <p className="mt-2 text-sm text-gray-500">
-                            No feedback
-                            posted yet.
-                          </p>
-                        ) : (
-                          <div className="mt-3 space-y-3">
-                            {items.map(
-                              (item) => {
-                                const author =
-                                  profileMap.get(
-                                    item.author_id
-                                  );
+                        <p className="mt-1 text-xs text-gray-500">
+                          Submitted {formatPortalDateTime(submission.submitted_at)}
+                        </p>
 
-                                const authorLabel =
-                                  getProfileLabel(
-                                    author
-                                  );
+                        <p className="mt-1 text-xs text-gray-500">
+                          Uploaded by {uploader?.full_name ?? "Unknown user"}
+                          {uploaderLabel ? ` (${uploaderLabel})` : ""}
+                        </p>
 
-                                return (
-                                  <div
-                                    key={
-                                      item.id
-                                    }
-                                    className="rounded-md bg-gray-50 p-4"
-                                  >
-                                    <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
-                                      {
-                                        item.feedback_text
-                                      }
-                                    </p>
-
-                                    <div className="mt-3 border-t border-gray-200 pt-2">
-                                      <p className="text-xs font-medium text-gray-700">
-                                        {author?.full_name ??
-                                          "Unknown author"}
-
-                                        {authorLabel
-                                          ? ` (${authorLabel})`
-                                          : ""}
-                                      </p>
-
-                                      <p className="mt-1 text-xs text-gray-500">
-                                        {formatPortalDateTime(
-                                          item.created_at
-                                        )}
-                                      </p>
-                                    </div>
-                                  </div>
-                                );
-                              }
-                            )}
-                          </div>
+                        {canEditSubmissionDates && (
+                          <SubmissionEditForm
+                            caseId={caseId}
+                            submission={{
+                              id: submission.id,
+                              submitted_at: submission.submitted_at,
+                              original_date: submission.original_date,
+                            }}
+                          />
                         )}
-
-                        <FeedbackForm
-                          caseId={
-                            caseId
-                          }
-                          submissionId={
-                            submission.id
-                          }
-                        />
                       </div>
-                    </article>
-                  );
-                }
-              )}
+
+                      <Link
+                        href={`/submissions/${submission.id}/download`}
+                        className="h-fit rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        Download
+                      </Link>
+                    </div>
+
+                    <div className="mt-5 border-t border-gray-100 pt-5">
+                      <h4 className="text-sm font-semibold text-gray-900">
+                        Feedback
+                      </h4>
+
+                      {items.length === 0 ? (
+                        <p className="mt-2 text-sm text-gray-500">
+                          No feedback posted yet.
+                        </p>
+                      ) : (
+                        <div className="mt-3 space-y-3">
+                          {items.map((item) => {
+                            const author = profileMap.get(item.author_id);
+                            const authorLabel = getProfileLabel(author);
+
+                            return (
+                              <div
+                                key={item.id}
+                                className="rounded-md bg-gray-50 p-4"
+                              >
+                                <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                                  {item.feedback_text}
+                                </p>
+                                <div className="mt-3 border-t border-gray-200 pt-2">
+                                  <p className="text-xs font-medium text-gray-700">
+                                    {author?.full_name ?? "Unknown author"}
+                                    {authorLabel ? ` (${authorLabel})` : ""}
+                                  </p>
+                                  <p className="mt-1 text-xs text-gray-500">
+                                    {formatPortalDateTime(item.created_at)}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      <FeedbackForm
+                        caseId={caseId}
+                        submissionId={submission.id}
+                      />
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>
@@ -452,20 +260,12 @@ export default async function AdminSubmissionsSection({
         <h2 className="text-lg font-semibold text-gray-950">
           Upload submission
         </h2>
-
         <p className="mt-1 text-sm leading-6 text-gray-500">
-          Upload a PDF or Word
-          document directly to this
-          supervision&apos;s shared
-          submission record.
+          Upload a PDF or Word document directly to this supervision&apos;s
+          shared submission record.
         </p>
-
         <div className="mt-6">
-          <SubmissionUploadForm
-            caseId={
-              caseId
-            }
-          />
+          <SubmissionUploadForm caseId={caseId} />
         </div>
       </div>
     </section>
