@@ -10,7 +10,7 @@
 - Changed submission ordering to use `original_date` descending, with the submission timestamp as a secondary sort key.
 - Added original-date display to supervisor and student submission views.
 - Restricted submission date editing to the primary/global supervisor while preserving existing student and assigned-staff upload/read permissions.
-- Added a database migration to backfill existing submission original dates and index the new ordering fields.
+- Added database migrations to backfill existing submission original dates, index the new ordering fields, and align future defaults with the portal's Santiago calendar date.
 - Hardened production configuration by pinning Node.js 24 and aligning local Supabase Auth settings with the invitation-only production setup.
 
 ### Code changes
@@ -33,6 +33,7 @@
 `database and infrastructure`
 
 - Added migration `20260824170000_add_submission_original_date.sql`.
+- Added migration `20260824171128_fix_submission_original_date_default.sql` to align new submission defaults with the Santiago calendar date.
 - Added an index on `case_id`, `original_date`, and `submitted_at` for submission ordering.
 - Pinned the application runtime to Node.js 24 through `.nvmrc` and `package.json`.
 - Updated local Supabase Auth configuration to mirror the invitation-only production configuration and minimum password requirements.
@@ -40,7 +41,7 @@
 ### Notes
 
 - Existing submissions receive an `original_date` derived from their previous submission timestamp during migration.
-- New submissions default `original_date` to the current date and can subsequently be corrected by the primary/global supervisor.
+- New submissions default `original_date` to the current Santiago date and can subsequently be corrected by the primary/global supervisor.
 - Submission files, feedback, versioning, private downloads, and case-scoped access controls are otherwise unchanged.
 - The portal remains invitation-only.
 
