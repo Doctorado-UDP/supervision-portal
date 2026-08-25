@@ -6,6 +6,7 @@ import MeetingEditForm from "@/components/admin/meeting-edit-form";
 import MeetingForm from "@/components/admin/meeting-form";
 import MilestoneEditForm from "@/components/admin/milestone-edit-form";
 import MilestoneForm from "@/components/admin/milestone-form";
+import PaginatedList from "@/components/shared/paginated-list";
 
 import {
   isGlobalSupervisor,
@@ -307,7 +308,7 @@ export default async function SupervisionPage({ params }: SupervisionPageProps) 
                 No milestones have been added.
               </p>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <PaginatedList className="divide-y divide-gray-100" ariaLabel="Milestones pagination">
                 {milestones.map((milestone) => (
                   <div key={milestone.id} className="py-5">
                     <div className="flex flex-col justify-between gap-4 sm:flex-row">
@@ -371,7 +372,7 @@ export default async function SupervisionPage({ params }: SupervisionPageProps) 
                     </div>
                   </div>
                 ))}
-              </div>
+              </PaginatedList>
             )}
           </div>
         </div>
@@ -397,7 +398,7 @@ export default async function SupervisionPage({ params }: SupervisionPageProps) 
                 No meetings have been recorded.
               </p>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <PaginatedList className="divide-y divide-gray-100" ariaLabel="Meetings pagination">
                 {meetings.map((meeting) => (
                   <div key={meeting.id} className="py-5">
                     <p className="font-medium text-gray-900">
@@ -423,7 +424,7 @@ export default async function SupervisionPage({ params }: SupervisionPageProps) 
                     </form>
                   </div>
                 ))}
-              </div>
+              </PaginatedList>
             )}
           </div>
         </div>

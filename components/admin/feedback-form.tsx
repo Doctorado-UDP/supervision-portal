@@ -62,10 +62,14 @@ export default function FeedbackForm({
           id={`feedback-${submissionId}`}
           name="feedback_text"
           required
-          rows={4}
+          rows={6}
           placeholder="General feedback on this submission"
           className="w-full rounded-md border border-gray-300 px-3 py-2"
         />
+        <p className="mt-2 text-xs leading-5 text-gray-500">
+          Markdown is supported. Use <code>$...$</code> for inline LaTeX maths
+          and <code>$$...$$</code> for display equations.
+        </p>
       </div>
 
       {state.error && (
