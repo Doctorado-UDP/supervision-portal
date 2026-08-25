@@ -242,19 +242,29 @@ export default async function AdminSubmissionsSection({
                                     {authorLabel ? ` (${authorLabel})` : ""}
                                   </p>
                                   <p className="mt-1 text-xs text-gray-500">
-                                    {formatPortalDateTime(item.created_at)}
-                                    {wasEdited ? " · Edited" : ""}
-                                  </p>
+                          Posted {formatPortalDateTime(item.created_at)}
+                        </p>
+                        {wasEdited && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            Edited {formatPortalDateTime(item.updated_at)}
+                          </p>
+                        )}
                                 </div>
                                 {canEditFeedback && (
-                                  <FeedbackEditForm
-                                    caseId={caseId}
-                                    feedback={{
-                                      id: item.id,
-                                      feedback_text: item.feedback_text,
-                                    }}
-                                  />
-                                )}
+                        <FeedbackEditForm
+                          caseId={caseId}
+                          feedback={{
+                            id: item.id,
+                            feedback_text: item.feedback_text,
+                          }}
+                        />
+                      )}
+                      {canEditSubmissionDates && (
+                        <FeedbackDeleteForm
+                          caseId={caseId}
+                          feedbackId={item.id}
+                        />
+                      )}
                               </div>
                             );
                           })}
