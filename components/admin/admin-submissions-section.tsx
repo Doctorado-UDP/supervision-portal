@@ -6,6 +6,7 @@ import FeedbackForm from "@/components/admin/feedback-form";
 import RichFeedback from "@/components/feedback/rich-feedback";
 import PaginatedList from "@/components/shared/paginated-list";
 import SubmissionEditForm from "@/components/admin/submission-edit-form";
+import SubmissionDeleteForm from "@/components/admin/submission-delete-form";
 import SubmissionUploadForm from "@/components/submissions/submission-upload-form";
 
 import {
@@ -200,6 +201,12 @@ export default async function AdminSubmissionsSection({
                             }}
                           />
                         )}
+              {canEditSubmissionDates && (
+                <SubmissionDeleteForm
+                  caseId={caseId}
+                  submissionId={submission.id}
+                />
+              )}
                       </div>
 
                       <Link
@@ -243,12 +250,10 @@ export default async function AdminSubmissionsSection({
                                   </p>
                                   <p className="mt-1 text-xs text-gray-500">
                           Posted {formatPortalDateTime(item.created_at)}
+                          {wasEdited
+                            ? ` · Edited ${formatPortalDateTime(item.updated_at)}`
+                            : ""}
                         </p>
-                        {wasEdited && (
-                          <p className="mt-1 text-xs text-gray-500">
-                            Edited {formatPortalDateTime(item.updated_at)}
-                          </p>
-                        )}
                                 </div>
                                 {canEditFeedback && (
                         <FeedbackEditForm

@@ -9,6 +9,7 @@
 - Added LaTeX mathematical notation using inline `$...$` and display `$$...$$` syntax rendered with KaTeX.
 - Added explicit posted and edited date/time metadata using the existing feedback `created_at` and `updated_at` timestamps.
 - Added global-supervisor-only feedback deletion with confirmation.
+- Added global-supervisor-only submission deletion, including its private Storage file and associated feedback.
 - Limited milestones, meetings, submissions, and feedback histories to five visible items at a time with pagination.
 - Added the current release version and codename to the README and site footer.
 
@@ -18,6 +19,7 @@
 - Raw HTML in feedback remains disabled.
 - Feedback editing remains case-scoped: the primary/global supervisor may edit all feedback, while assigned staff may edit only their own feedback. Only the primary/global supervisor may delete feedback.
 - Migration `20260825084421_restrict_feedback_deletion.sql` removes assigned-staff feedback deletion at the database-policy level.
+- Migration `20260825090109_restrict_submission_deletion.sql` restricts persisted submission and file deletion to the primary/global supervisor while preserving uploader cleanup of failed-upload orphan files.
 - Pagination is client-side within each supervision view and preserves the existing newest-first ordering of milestones, meetings, and submissions.
 
 ---

@@ -372,13 +372,11 @@ export default async function StudentPage() {
                                     </p>
                                     <p className="mt-1 text-xs text-gray-500">
                             Posted {formatPortalDateTime(item.created_at)}
+                            {new Date(item.updated_at).getTime() >
+                            new Date(item.created_at).getTime() + 1000
+                              ? ` · Edited ${formatPortalDateTime(item.updated_at)}`
+                              : ""}
                           </p>
-                          {new Date(item.updated_at).getTime() >
-                            new Date(item.created_at).getTime() + 1000 && (
-                            <p className="mt-1 text-xs text-gray-500">
-                              Edited {formatPortalDateTime(item.updated_at)}
-                            </p>
-                          )}
                                   </div>
                                 </div>
                               );
