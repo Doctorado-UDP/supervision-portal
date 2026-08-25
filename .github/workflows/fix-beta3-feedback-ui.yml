@@ -1,0 +1,127 @@
+name: Fix beta.3 feedback UI
+
+on:
+  push:
+    branches:
+      - feature/editable-rich-feedback
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/editable-rich-feedback
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Patch feedback UI
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_exact(path, old, new, label):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected 1 occurrence, found {count}")
+              p.write_text(text.replace(old, new, 1))
+
+          replace_exact(
+              'components/admin/admin-submissions-section.tsx',
+              '''                                  <p className="mt-1 text-xs text-gray-500">
+                                    {formatPortalDateTime(item.created_at)}
+                                    {wasEdited ? " · Edited" : ""}
+                                  </p>''',
+              '''                                  <p className="mt-1 text-xs text-gray-500">
+                                    Posted {formatPortalDateTime(item.created_at)}
+                                  </p>
+                                  {wasEdited && (
+                                    <p className="mt-1 text-xs text-gray-500">
+                                      Edited {formatPortalDateTime(item.updated_at)}
+                                    </p>
+                                  )}''',
+              'admin timestamp'
+          )
+
+          replace_exact(
+              'components/admin/admin-submissions-section.tsx',
+              '''                                {canEditFeedback && (
+                                  <FeedbackEditForm
+                                    caseId={caseId}
+                                    feedback={{
+                                      id: item.id,
+                                      feedback_text: item.feedback_text,
+                                    }}
+                                  />
+                                )}''',
+              '''                                {canEditFeedback && (
+                                  <FeedbackEditForm
+                                    caseId={caseId}
+                                    feedback={{
+                                      id: item.id,
+                                      feedback_text: item.feedback_text,
+                                    }}
+                                  />
+                                )}
+                                {canEditSubmissionDates && (
+                                  <FeedbackDeleteForm
+                                    caseId={caseId}
+                                    feedbackId={item.id}
+                                  />
+                                )}''',
+              'admin delete control'
+          )
+
+          replace_exact(
+              'app/student/page.tsx',
+              '''                                    <p className="mt-1 text-xs text-gray-500">
+                                      {formatPortalDateTime(item.created_at)}
+                                      {new Date(item.updated_at).getTime() >
+                                      new Date(item.created_at).getTime() + 1000
+                                        ? " · Edited"
+                                        : ""}
+                                    </p>''',
+              '''                                    <p className="mt-1 text-xs text-gray-500">
+                                      Posted {formatPortalDateTime(item.created_at)}
+                                    </p>
+                                    {new Date(item.updated_at).getTime() >
+                                      new Date(item.created_at).getTime() + 1000 && (
+                                      <p className="mt-1 text-xs text-gray-500">
+                                        Edited {formatPortalDateTime(item.updated_at)}
+                                      </p>
+                                    )}''',
+              'student timestamp'
+          )
+
+          admin = Path('components/admin/admin-submissions-section.tsx').read_text()
+          student = Path('app/student/page.tsx').read_text()
+          assert 'Edited {formatPortalDateTime(item.updated_at)}' in admin
+          assert '<FeedbackDeleteForm' in admin
+          assert 'Edited {formatPortalDateTime(item.updated_at)}' in student
+          PY
+
+      - name: Validate
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+          git diff --check
+
+      - name: Commit corrected UI
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/admin/admin-submissions-section.tsx app/student/page.tsx
+          git commit -m "Show feedback edit timestamps and admin delete control"
+          git push
