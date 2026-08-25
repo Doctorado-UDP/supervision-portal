@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import FeedbackDeleteForm from "@/components/admin/feedback-delete-form";
 import FeedbackEditForm from "@/components/admin/feedback-edit-form";
 import FeedbackForm from "@/components/admin/feedback-form";
 import RichFeedback from "@/components/feedback/rich-feedback";

@@ -7,7 +7,8 @@
 - Added editing for existing feedback while preserving case-scoped permissions.
 - Added Markdown rendering for feedback, including GitHub-flavoured Markdown features.
 - Added LaTeX mathematical notation using inline `$...$` and display `$$...$$` syntax rendered with KaTeX.
-- Added an edited-state indicator based on the existing feedback `updated_at` timestamp.
+- Added explicit posted and edited date/time metadata using the existing feedback `created_at` and `updated_at` timestamps.
+- Added global-supervisor-only feedback deletion with confirmation.
 - Limited milestones, meetings, submissions, and feedback histories to five visible items at a time with pagination.
 - Added the current release version and codename to the README and site footer.
 
@@ -15,7 +16,7 @@
 
 - Existing plain-text feedback remains valid and renders as normal Markdown text.
 - Raw HTML in feedback remains disabled.
-- Feedback permissions are unchanged: the primary/global supervisor may edit all feedback, while assigned staff may edit only their own feedback.
+- Feedback editing remains case-scoped: the primary/global supervisor may edit all feedback, while assigned staff may edit only their own feedback. Only the primary/global supervisor may delete feedback.
 - Pagination is client-side within each supervision view and preserves the existing newest-first ordering of milestones, meetings, and submissions.
 
 ---
