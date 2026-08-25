@@ -4,6 +4,8 @@ A lightweight graduate supervision portal for managing students, individual and 
 
 Built with **Next.js**, **Supabase**, and **Netlify**.
 
+**Current version:** `v0.1.0-beta.3 "Brisk Forge"`
+
 Production: [supervision.bgonzalezbustamante.com](https://supervision.bgonzalezbustamante.com)
 
 ## Development

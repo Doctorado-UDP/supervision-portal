@@ -4,23 +4,29 @@ export default function SiteFooter() {
   return (
     <footer className="border-t border-gray-200 bg-white">
       <div className="mx-auto max-w-7xl px-6 py-5 text-center text-sm text-gray-500">
-        <a
-          href={SITE_CONFIG.personalWebsiteUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-gray-700 hover:text-gray-950"
-        >
-          Dr. Bastián González-Bustamante
-        </a>{" "}
-        portal, developed by{" "}
-        <a
-          href={SITE_CONFIG.empiriaLabUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-gray-700 hover:text-gray-950"
-        >
-          Empiria Lab
-        </a>
+        <p>
+          Supervision Portal - {SITE_CONFIG.releaseVersion} &quot;
+          {SITE_CONFIG.releaseCodename}&quot;
+        </p>
+        <p className="mt-1">
+          <a
+            href={SITE_CONFIG.personalWebsiteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-gray-700 hover:text-gray-950"
+          >
+            Dr. Bastián González-Bustamante
+          </a>
+          , developed by{" "}
+          <a
+            href={SITE_CONFIG.empiriaLabUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-gray-700 hover:text-gray-950"
+          >
+            Empiria Lab
+          </a>
+        </p>
       </div>
     </footer>
   );

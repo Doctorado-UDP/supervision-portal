@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 
 import SiteFooter from "@/components/shared/site-footer";
 import StudentHeader from "@/components/student/student-header";
+import RichFeedback from "@/components/feedback/rich-feedback";
+import PaginatedList from "@/components/shared/paginated-list";
 import SubmissionUploadForm from "@/components/submissions/submission-upload-form";
 
 import { SITE_CONFIG } from "@/lib/config/site";
@@ -181,12 +183,13 @@ export default async function StudentPage() {
     author_id: string;
     feedback_text: string;
     created_at: string;
+    updated_at: string;
   }[] = [];
 
   if (submissionIds.length > 0) {
     const { data, error } = await supabase
       .from("feedback")
-      .select("id, submission_id, author_id, feedback_text, created_at")
+      .select("id, submission_id, author_id, feedback_text, created_at, updated_at")
       .in("submission_id", submissionIds)
       .order("created_at", { ascending: true });
 
@@ -299,7 +302,7 @@ export default async function StudentPage() {
               original date with the most recent first.
             </p>
 
-            <div className="mt-6 space-y-5">
+            <PaginatedList className="mt-6 space-y-5" ariaLabel="Submissions pagination">
               {submissions.length === 0 ? (
                 <p className="rounded-lg bg-gray-50 px-4 py-6 text-sm text-gray-500">
                   No submissions uploaded yet.
@@ -354,14 +357,12 @@ export default async function StudentPage() {
                         {items.length === 0 ? (
                           <p className="mt-2 text-sm text-gray-500">No feedback posted yet.</p>
                         ) : (
-                          <div className="mt-3 space-y-3">
+                          <PaginatedList className="mt-3 space-y-3" ariaLabel="Feedback pagination">
                             {items.map((item) => {
                               const author = personMap.get(item.author_id);
                               return (
                                 <div key={item.id} className="rounded-md bg-gray-50 p-4">
-                                  <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
-                                    {item.feedback_text}
-                                  </p>
+                                  <RichFeedback>{item.feedback_text}</RichFeedback>
                                   <div className="mt-3 border-t border-gray-200 pt-2">
                                     <p className="text-xs font-medium text-gray-700">
                                       {author?.full_name ?? "Unknown author"}
@@ -370,20 +371,24 @@ export default async function StudentPage() {
                                         : ""}
                                     </p>
                                     <p className="mt-1 text-xs text-gray-500">
-                                      {formatPortalDateTime(item.created_at)}
-                                    </p>
+                            Posted {formatPortalDateTime(item.created_at)}
+                            {new Date(item.updated_at).getTime() >
+                            new Date(item.created_at).getTime() + 1000
+                              ? ` · Edited ${formatPortalDateTime(item.updated_at)}`
+                              : ""}
+                          </p>
                                   </div>
                                 </div>
                               );
                             })}
-                          </div>
+                          </PaginatedList>
                         )}
                       </div>
                     </article>
                   );
                 })
               )}
-            </div>
+            </PaginatedList>
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -403,7 +408,7 @@ export default async function StudentPage() {
             <p className="mt-1 text-sm text-gray-500">
               Shared deadlines and planned outputs for this supervision.
             </p>
-            <div className="mt-5 space-y-4">
+            <PaginatedList className="mt-5 space-y-4" ariaLabel="Milestones pagination">
               {milestones.length === 0 ? (
                 <p className="text-sm text-gray-500">No milestones.</p>
               ) : (
@@ -429,7 +434,7 @@ export default async function StudentPage() {
                   </div>
                 ))
               )}
-            </div>
+            </PaginatedList>
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -448,7 +453,7 @@ export default async function StudentPage() {
                 Book a supervision meeting
               </a>
             </div>
-            <div className="mt-5 space-y-4">
+            <PaginatedList className="mt-5 space-y-4" ariaLabel="Meetings pagination">
               {meetings.length === 0 ? (
                 <p className="text-sm text-gray-500">No meetings recorded.</p>
               ) : (
@@ -468,7 +473,7 @@ export default async function StudentPage() {
                   </div>
                 ))
               )}
-            </div>
+            </PaginatedList>
           </div>
         </section>
       </main>

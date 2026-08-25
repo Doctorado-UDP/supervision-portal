@@ -1,7 +1,12 @@
 import Link from "next/link";
 
+import FeedbackDeleteForm from "@/components/admin/feedback-delete-form";
+import FeedbackEditForm from "@/components/admin/feedback-edit-form";
 import FeedbackForm from "@/components/admin/feedback-form";
+import RichFeedback from "@/components/feedback/rich-feedback";
+import PaginatedList from "@/components/shared/paginated-list";
 import SubmissionEditForm from "@/components/admin/submission-edit-form";
+import SubmissionDeleteForm from "@/components/admin/submission-delete-form";
 import SubmissionUploadForm from "@/components/submissions/submission-upload-form";
 
 import {
@@ -71,12 +76,13 @@ export default async function AdminSubmissionsSection({
     author_id: string;
     feedback_text: string;
     created_at: string;
+    updated_at: string;
   }[] = [];
 
   if (submissionIds.length > 0) {
     const { data, error } = await supabase
       .from("feedback")
-      .select("id, submission_id, author_id, feedback_text, created_at")
+      .select("id, submission_id, author_id, feedback_text, created_at, updated_at")
       .in("submission_id", submissionIds)
       .order("created_at", { ascending: true });
 
@@ -146,7 +152,7 @@ export default async function AdminSubmissionsSection({
               No submissions have been uploaded.
             </p>
           ) : (
-            <div className="space-y-6">
+            <PaginatedList className="space-y-6" ariaLabel="Submissions pagination">
               {submissions.map((submission) => {
                 const items = feedbackMap.get(submission.id) ?? [];
                 const uploader = profileMap.get(submission.uploaded_by);
@@ -195,6 +201,12 @@ export default async function AdminSubmissionsSection({
                             }}
                           />
                         )}
+              {canEditSubmissionDates && (
+                <SubmissionDeleteForm
+                  caseId={caseId}
+                  submissionId={submission.id}
+                />
+              )}
                       </div>
 
                       <Link
@@ -215,32 +227,53 @@ export default async function AdminSubmissionsSection({
                           No feedback posted yet.
                         </p>
                       ) : (
-                        <div className="mt-3 space-y-3">
+                        <PaginatedList className="mt-3 space-y-3" ariaLabel="Feedback pagination">
                           {items.map((item) => {
                             const author = profileMap.get(item.author_id);
                             const authorLabel = getProfileLabel(author);
+                            const canEditFeedback =
+                              canEditSubmissionDates || item.author_id === admin.id;
+                            const wasEdited =
+                              new Date(item.updated_at).getTime() >
+                              new Date(item.created_at).getTime() + 1000;
 
                             return (
                               <div
                                 key={item.id}
                                 className="rounded-md bg-gray-50 p-4"
                               >
-                                <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
-                                  {item.feedback_text}
-                                </p>
+                                <RichFeedback>{item.feedback_text}</RichFeedback>
                                 <div className="mt-3 border-t border-gray-200 pt-2">
                                   <p className="text-xs font-medium text-gray-700">
                                     {author?.full_name ?? "Unknown author"}
                                     {authorLabel ? ` (${authorLabel})` : ""}
                                   </p>
                                   <p className="mt-1 text-xs text-gray-500">
-                                    {formatPortalDateTime(item.created_at)}
-                                  </p>
+                          Posted {formatPortalDateTime(item.created_at)}
+                          {wasEdited
+                            ? ` · Edited ${formatPortalDateTime(item.updated_at)}`
+                            : ""}
+                        </p>
                                 </div>
+                                {canEditFeedback && (
+                        <FeedbackEditForm
+                          caseId={caseId}
+                          feedback={{
+                            id: item.id,
+                            feedback_text: item.feedback_text,
+                          }}
+                        />
+                      )}
+                      {canEditSubmissionDates && (
+                        <FeedbackDeleteForm
+                          caseId={caseId}
+                          feedbackId={item.id}
+                        />
+                      )}
                               </div>
                             );
                           })}
-                        </div>
+                        </PaginatedList>
                       )}
 
                       <FeedbackForm
@@ -251,7 +284,7 @@ export default async function AdminSubmissionsSection({
                   </article>
                 );
               })}
-            </div>
+            </PaginatedList>
           )}
         </div>
       </div>

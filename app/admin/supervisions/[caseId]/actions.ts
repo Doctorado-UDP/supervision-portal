@@ -86,6 +86,63 @@ export async function createFeedback(
   return { error: null, success: "Feedback posted." };
 }
 
+export async function updateFeedback(
+  _previousState: FeedbackActionState,
+  formData: FormData
+): Promise<FeedbackActionState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const caseId = String(formData.get("case_id") ?? "").trim();
+  const feedbackId = String(formData.get("feedback_id") ?? "").trim();
+  const feedbackText = String(formData.get("feedback_text") ?? "").trim();
+
+  if (!caseId || !feedbackId || !feedbackText) {
+    return { error: "Feedback cannot be empty.", success: null };
+  }
+
+  const { data: feedbackItem, error: feedbackError } = await supabase
+    .from("feedback")
+    .select("id, submission_id")
+    .eq("id", feedbackId)
+    .maybeSingle();
+
+  if (feedbackError || !feedbackItem) {
+    console.error(feedbackError);
+    return { error: "The feedback could not be found.", success: null };
+  }
+
+  const { data: submission, error: submissionError } = await supabase
+    .from("submissions")
+    .select("id")
+    .eq("id", feedbackItem.submission_id)
+    .eq("case_id", caseId)
+    .maybeSingle();
+
+  if (submissionError || !submission) {
+    console.error(submissionError);
+    return {
+      error: "The feedback does not belong to this supervision.",
+      success: null,
+    };
+  }
+
+  const { error } = await supabase
+    .from("feedback")
+    .update({
+      feedback_text: feedbackText,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", feedbackId);
+
+  if (error) {
+    console.error(error);
+    return { error: "Unable to update feedback.", success: null };
+  }
+
+  revalidateSupervisionPages(caseId);
+  return { error: null, success: "Feedback updated." };
+}
+
 export async function createMilestone(
   _previousState: PlanningActionState,
   formData: FormData
