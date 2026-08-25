@@ -28,22 +28,20 @@ jobs:
         run: |
           python <<'PY'
           from pathlib import Path
+          import re
 
-          def replace_exact(path, old, new, label):
+          def replace_regex(path, pattern, replacement, label):
               p = Path(path)
               text = p.read_text()
-              count = text.count(old)
+              new_text, count = re.subn(pattern, replacement, text, count=1, flags=re.MULTILINE)
               if count != 1:
-                  raise SystemExit(f"{label}: expected 1 occurrence, found {count}")
-              p.write_text(text.replace(old, new, 1))
+                  raise SystemExit(f"{label}: expected 1 match, found {count}")
+              p.write_text(new_text)
 
-          replace_exact(
+          replace_regex(
               'components/admin/admin-submissions-section.tsx',
-              '''                                  <p className="mt-1 text-xs text-gray-500">
-                                    {formatPortalDateTime(item.created_at)}
-                                    {wasEdited ? " · Edited" : ""}
-                                  </p>''',
-              '''                                  <p className="mt-1 text-xs text-gray-500">
+              r'<p className="mt-1 text-xs text-gray-500">\s*\{formatPortalDateTime\(item\.created_at\)\}\s*\{wasEdited \? " · Edited" : ""\}\s*</p>',
+              '''<p className="mt-1 text-xs text-gray-500">
                                     Posted {formatPortalDateTime(item.created_at)}
                                   </p>
                                   {wasEdited && (
@@ -54,18 +52,10 @@ jobs:
               'admin timestamp'
           )
 
-          replace_exact(
+          replace_regex(
               'components/admin/admin-submissions-section.tsx',
-              '''                                {canEditFeedback && (
-                                  <FeedbackEditForm
-                                    caseId={caseId}
-                                    feedback={{
-                                      id: item.id,
-                                      feedback_text: item.feedback_text,
-                                    }}
-                                  />
-                                )}''',
-              '''                                {canEditFeedback && (
+              r'\{canEditFeedback && \(\s*<FeedbackEditForm\s*caseId=\{caseId\}\s*feedback=\{\{\s*id: item\.id,\s*feedback_text: item\.feedback_text,\s*\}\}\s*/>\s*\)\}',
+              '''{canEditFeedback && (
                                   <FeedbackEditForm
                                     caseId={caseId}
                                     feedback={{
@@ -83,16 +73,10 @@ jobs:
               'admin delete control'
           )
 
-          replace_exact(
+          replace_regex(
               'app/student/page.tsx',
-              '''                                    <p className="mt-1 text-xs text-gray-500">
-                                      {formatPortalDateTime(item.created_at)}
-                                      {new Date(item.updated_at).getTime() >
-                                      new Date(item.created_at).getTime() + 1000
-                                        ? " · Edited"
-                                        : ""}
-                                    </p>''',
-              '''                                    <p className="mt-1 text-xs text-gray-500">
+              r'<p className="mt-1 text-xs text-gray-500">\s*\{formatPortalDateTime\(item\.created_at\)\}\s*\{new Date\(item\.updated_at\)\.getTime\(\) >\s*new Date\(item\.created_at\)\.getTime\(\) \+ 1000\s*\? " · Edited"\s*: ""\}\s*</p>',
+              '''<p className="mt-1 text-xs text-gray-500">
                                       Posted {formatPortalDateTime(item.created_at)}
                                     </p>
                                     {new Date(item.updated_at).getTime() >
