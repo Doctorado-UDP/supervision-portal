@@ -8,10 +8,7 @@ import PasswordForm from "./password-form";
 
 export default async function OnboardingPage() {
   const supabase = await createClient();
-
-  const { data: claimsData, error: claimsError } =
-    await supabase.auth.getClaims();
-
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
   const userId = claimsData?.claims?.sub;
 
   if (claimsError || !userId) {
@@ -28,10 +25,6 @@ export default async function OnboardingPage() {
     throw new Error(
       "The authenticated user does not have an accessible profile."
     );
-  }
-
-  if (profile.role === "admin") {
-    redirect("/dashboard");
   }
 
   return (
@@ -55,7 +48,7 @@ export default async function OnboardingPage() {
             </h1>
 
             <p className="mt-2 text-sm text-gray-600">
-              Complete your account setup
+              Complete your {profile.role === "admin" ? "Staff" : "Student"} account setup
             </p>
           </div>
 
