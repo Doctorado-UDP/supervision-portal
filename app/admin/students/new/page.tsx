@@ -4,8 +4,17 @@ import StudentForm from "@/components/admin/student-form";
 import { requireGlobalSupervisor } from "@/lib/auth/require-admin";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function NewStudentPage() {
+type NewStudentPageProps = {
+  searchParams: Promise<{
+    userId?: string;
+  }>;
+};
+
+export default async function NewStudentPage({
+  searchParams,
+}: NewStudentPageProps) {
   await requireGlobalSupervisor("/admin/students");
+  const params = await searchParams;
   const supabase = await createClient();
 
   const [profilesResult, studentsResult] = await Promise.all([
@@ -19,7 +28,7 @@ export default async function NewStudentPage() {
 
   if (profilesResult.error || studentsResult.error) {
     console.error(profilesResult.error, studentsResult.error);
-    throw new Error("Unable to load available student accounts.");
+    throw new Error("Unable to load invited Student accounts.");
   }
 
   const registeredUserIds = new Set(
@@ -41,36 +50,39 @@ export default async function NewStudentPage() {
         </Link>
 
         <h1 className="mt-4 text-3xl font-semibold tracking-tight text-gray-950">
-          Add student
+          Configure student
         </h1>
 
         <p className="mt-2 text-gray-600">
-          Create a supervision record for an invited Student account.
+          Add supervision details to an invited Student account. This creates the
+          student&apos;s supervision case and primary supervisor assignment.
         </p>
       </div>
 
       {availableProfiles.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="font-semibold text-gray-900">
-            No available student accounts
+            No Student accounts require setup
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-gray-600">
-            Invite the student from the portal&apos;s Access area. Once the
-            invitation account exists, return here to configure the supervision
-            record.
+            Invite a new Student from Access management. The invited account will
+            appear in Students immediately and can then be configured here.
           </p>
 
           <Link
-            href="/admin/access"
+            href="/admin/access#invite-user"
             className="mt-4 inline-flex rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Open Access management
+            Invite student
           </Link>
         </div>
       ) : (
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <StudentForm availableProfiles={availableProfiles} />
+          <StudentForm
+            availableProfiles={availableProfiles}
+            defaultUserId={params.userId}
+          />
         </div>
       )}
     </div>
