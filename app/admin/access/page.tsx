@@ -1,3 +1,4 @@
+import AccountDeleteButton from "@/components/admin/account-delete-button";
 import InvitationActions from "@/components/admin/invitation-actions";
 import { isGlobalSupervisor, requireGlobalSupervisor } from "@/lib/auth/require-admin";
 import { formatPortalDateTime } from "@/lib/datetime/format";
@@ -141,8 +142,9 @@ export default async function AccessPage({ searchParams }: AccessPageProps) {
         <div className="mb-4">
           <h2 className="text-xl font-semibold text-gray-950">Accounts</h2>
           <p className="mt-1 text-sm leading-6 text-gray-600">
-            Roles are shown for reference. Supervision and staff assignments are
-            managed separately from account identity.
+            Roles are shown for reference. The primary supervisor can delete
+            unused accounts; accounts with supervision history or assignments
+            are protected.
           </p>
         </div>
 
@@ -164,7 +166,7 @@ export default async function AccessPage({ searchParams }: AccessPageProps) {
                 key={profile.id}
                 className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
               >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h3 className="font-semibold text-gray-950">
                       {profile.full_name}
@@ -175,14 +177,23 @@ export default async function AccessPage({ searchParams }: AccessPageProps) {
                     <p className="mt-2 text-xs text-gray-500">{detail}</p>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
-                      {roleLabel(profile.role, primary)}
-                    </span>
-                    {pending && (
-                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
-                        Onboarding pending
+                  <div className="flex flex-col items-start gap-3 sm:items-end">
+                    <div className="flex flex-wrap gap-2">
+                      <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
+                        {roleLabel(profile.role, primary)}
                       </span>
+                      {pending && (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
+                          Onboarding pending
+                        </span>
+                      )}
+                    </div>
+
+                    {!primary && (
+                      <AccountDeleteButton
+                        userId={profile.id}
+                        fullName={profile.full_name}
+                      />
                     )}
                   </div>
                 </div>
