@@ -193,7 +193,10 @@ export default async function AccessPage({ searchParams }: AccessPageProps) {
       </section>
 
       <section className="grid gap-6 lg:grid-cols-5">
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
+        <div
+          id="invite-user"
+          className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2"
+        >
           <h2 className="text-lg font-semibold text-gray-950">Invite user</h2>
           <p className="mt-1 text-sm leading-6 text-gray-600">
             Send an invitation to a new Student or Staff account.
