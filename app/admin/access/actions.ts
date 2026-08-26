@@ -76,6 +76,42 @@ async function invokeInvitationAction(
   };
 }
 
+async function invokeAccountDeletion(userId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.functions.invoke(
+    "delete-supervision-user",
+    {
+      body: { user_id: userId },
+    }
+  );
+
+  if (error) {
+    console.error("Account deletion failed:", error, data);
+    return {
+      ok: false,
+      message:
+        typeof data?.error === "string"
+          ? data.error
+          : "The account could not be deleted.",
+    };
+  }
+
+  if (!data || data.ok !== true) {
+    return {
+      ok: false,
+      message:
+        typeof data?.error === "string"
+          ? data.error
+          : "The account deletion request returned an unexpected response.",
+    };
+  }
+
+  return {
+    ok: true,
+    message: typeof data.message === "string" ? data.message : "Account deleted.",
+  };
+}
+
 export async function createAccessInvitation(formData: FormData) {
   const supervisor = await requireGlobalSupervisor("/admin");
   const fullName = getText(formData, "full_name");
@@ -139,6 +175,7 @@ export async function createAccessInvitation(formData: FormData) {
 
   const result = await invokeInvitationAction(invitation.id, "send");
   revalidatePath("/admin/access");
+  revalidatePath("/admin/students");
 
   redirectAccess(result.ok ? "notice" : "error", result.message);
 }
@@ -153,6 +190,7 @@ export async function retryAccessInvitation(formData: FormData) {
 
   const result = await invokeInvitationAction(invitationId, "retry");
   revalidatePath("/admin/access");
+  revalidatePath("/admin/students");
   redirectAccess(result.ok ? "notice" : "error", result.message);
 }
 
@@ -166,5 +204,24 @@ export async function cancelAccessInvitation(formData: FormData) {
 
   const result = await invokeInvitationAction(invitationId, "cancel");
   revalidatePath("/admin/access");
+  revalidatePath("/admin/students");
+  redirectAccess(result.ok ? "notice" : "error", result.message);
+}
+
+export async function deleteAccessAccount(formData: FormData) {
+  await requireGlobalSupervisor("/admin");
+  const userId = getText(formData, "user_id");
+
+  if (!userId) {
+    redirectAccess("error", "Select an account to delete.");
+  }
+
+  const result = await invokeAccountDeletion(userId);
+  revalidatePath("/admin");
+  revalidatePath("/admin/access");
+  revalidatePath("/admin/students");
+  revalidatePath("/admin/supervisions");
+  revalidatePath("/admin/timetable");
+
   redirectAccess(result.ok ? "notice" : "error", result.message);
 }
