@@ -4,6 +4,17 @@ import Link from "next/link";
 import SiteFooter from "@/components/shared/site-footer";
 import { releases } from "@/lib/releases";
 
+function formatReleaseDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
 export default function ReleaseNotesPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900">
@@ -66,6 +77,10 @@ export default function ReleaseNotesPage() {
                           {release.status}
                         </span>
                       )}
+
+                      <span className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600">
+                        {formatReleaseDate(release.releaseDate)}
+                      </span>
                     </div>
 
                     <p className="mt-2 text-sm font-medium text-gray-700">
