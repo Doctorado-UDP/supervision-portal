@@ -44,7 +44,8 @@ export async function updateSession(request: NextRequest) {
   // Routes that must remain accessible without being logged in.
   const isPublicRoute =
     request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/auth");
+    request.nextUrl.pathname.startsWith("/auth") ||
+    request.nextUrl.pathname.startsWith("/release-notes");
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
