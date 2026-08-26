@@ -27,9 +27,10 @@ export default function StudentHeader({ fullName }: StudentHeaderProps) {
         <div className="flex items-center gap-4">
           <Link
             href="/account"
-            className="hidden text-sm text-gray-600 underline-offset-4 hover:text-gray-950 hover:underline sm:block"
+            className="text-sm text-gray-600 underline-offset-4 hover:text-gray-950 hover:underline"
           >
-            {fullName}
+            <span className="sm:hidden">Account</span>
+            <span className="hidden sm:inline">{fullName}</span>
           </Link>
 
           <form action="/auth/signout" method="post">
