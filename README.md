@@ -10,6 +10,8 @@ Production: [supervision.bgonzalezbustamante.com](https://supervision.bgonzalezb
 
 User-facing release history is available publicly at `/release-notes` in the deployed portal. Technical release details remain in `CHANGELOG.md`.
 
+Beta.4 access management includes guarded account deletion: accounts with supervision history, group supervision, or active Staff assignments are protected from accidental removal.
+
 ## Development
 
 ```bash
