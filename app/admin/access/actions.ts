@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { requireGlobalSupervisor } from "@/lib/auth/require-admin";
+import { SITE_CONFIG } from "@/lib/config/site";
 import { createClient } from "@/lib/supabase/server";
 
 function getText(formData: FormData, name: string) {
@@ -15,17 +17,33 @@ function redirectAccess(kind: "notice" | "error", message: string): never {
   redirect(`/admin/access?${kind}=${encodeURIComponent(message)}`);
 }
 
+async function getRequestOrigin() {
+  const requestHeaders = await headers();
+  const forwardedHost = requestHeaders.get("x-forwarded-host");
+  const host = forwardedHost ?? requestHeaders.get("host");
+  const forwardedProto = requestHeaders.get("x-forwarded-proto");
+  const protocol = forwardedProto ?? "https";
+
+  if (!host) {
+    return SITE_CONFIG.siteUrl;
+  }
+
+  return `${protocol}://${host}`;
+}
+
 async function invokeInvitationAction(
   invitationId: string,
   action: "send" | "retry" | "cancel"
 ) {
   const supabase = await createClient();
+  const redirectOrigin = await getRequestOrigin();
   const { data, error } = await supabase.functions.invoke(
     "invite-supervision-user",
     {
       body: {
         invitation_id: invitationId,
         action,
+        redirect_origin: redirectOrigin,
       },
     }
   );
@@ -72,7 +90,7 @@ export async function createAccessInvitation(formData: FormData) {
     redirectAccess("error", "Enter a valid email address.");
   }
 
-  if (!['student', 'staff'].includes(intendedRole)) {
+  if (!["student", "staff"].includes(intendedRole)) {
     redirectAccess("error", "Choose Student or Staff access.");
   }
 
