@@ -4,7 +4,15 @@ import SiteFooter from "@/components/shared/site-footer";
 
 import LoginForm from "./login-form";
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams: Promise<{
+    message?: string;
+  }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams;
+
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
       <main className="flex flex-1 items-center justify-center px-6 py-10">
@@ -35,7 +43,7 @@ export default function LoginPage() {
               Sign in
             </h2>
 
-            <LoginForm />
+            <LoginForm message={params.message} />
           </div>
 
           <p className="mt-6 text-center text-xs text-gray-500">
