@@ -50,7 +50,10 @@ Deno.serve(async (request: Request) => {
     callerProfile.role !== "admin" ||
     callerProfile.email?.toLowerCase() !== PRIMARY_SUPERVISOR_EMAIL.toLowerCase()
   ) {
-    return jsonResponse({ ok: false, error: "Global supervisor access is required." }, 403);
+    return jsonResponse(
+      { ok: false, error: "Global supervisor access is required." },
+      403
+    );
   }
 
   let payload: { invitation_id?: string; action?: string };
@@ -62,7 +65,12 @@ Deno.serve(async (request: Request) => {
   }
 
   const invitationId = payload.invitation_id?.trim();
-  const action = payload.action === "cancel" ? "cancel" : payload.action === "retry" ? "retry" : "send";
+  const action =
+    payload.action === "cancel"
+      ? "cancel"
+      : payload.action === "retry"
+        ? "retry"
+        : "send";
 
   if (!invitationId) {
     return jsonResponse({ ok: false, error: "Invitation ID is required." }, 400);
@@ -79,25 +87,65 @@ Deno.serve(async (request: Request) => {
   }
 
   if (invitation.status === "accepted") {
-    return jsonResponse({ ok: false, error: "This invitation has already been accepted." }, 409);
+    return jsonResponse(
+      { ok: false, error: "This invitation has already been accepted." },
+      409
+    );
   }
 
-  if (invitation.status === "cancelled" && action !== "send") {
-    return jsonResponse({ ok: false, error: "This invitation has been cancelled." }, 409);
+  if (invitation.status === "cancelled") {
+    return jsonResponse(
+      {
+        ok: false,
+        error:
+          "This invitation has been cancelled. Create a new invitation if access is required again.",
+      },
+      409
+    );
+  }
+
+  if (action === "send" && invitation.status !== "pending") {
+    return jsonResponse(
+      {
+        ok: false,
+        error: "This invitation has already been processed. Use Retry instead.",
+      },
+      409
+    );
   }
 
   async function accountHasLinkedRecords(authUserId: string) {
     const checks = await Promise.all([
-      admin.from("students").select("id", { count: "exact", head: true }).eq("user_id", authUserId),
-      admin.from("case_staff").select("id", { count: "exact", head: true }).eq("staff_id", authUserId),
-      admin.from("submissions").select("id", { count: "exact", head: true }).eq("uploaded_by", authUserId),
-      admin.from("feedback").select("id", { count: "exact", head: true }).eq("author_id", authUserId),
-      admin.from("meetings").select("id", { count: "exact", head: true }).eq("created_by", authUserId),
-      admin.from("supervisions").select("id", { count: "exact", head: true }).eq("supervisor_id", authUserId),
+      admin
+        .from("students")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", authUserId),
+      admin
+        .from("case_staff")
+        .select("id", { count: "exact", head: true })
+        .eq("staff_id", authUserId),
+      admin
+        .from("submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("uploaded_by", authUserId),
+      admin
+        .from("feedback")
+        .select("id", { count: "exact", head: true })
+        .eq("author_id", authUserId),
+      admin
+        .from("meetings")
+        .select("id", { count: "exact", head: true })
+        .eq("created_by", authUserId),
+      admin
+        .from("supervisions")
+        .select("id", { count: "exact", head: true })
+        .eq("supervisor_id", authUserId),
     ]);
 
     if (checks.some((result) => result.error)) {
-      throw new Error("Unable to verify whether the onboarding account is unused.");
+      throw new Error(
+        "Unable to verify whether the onboarding account is unused."
+      );
     }
 
     return checks.some((result) => (result.count ?? 0) > 0);
@@ -117,6 +165,24 @@ Deno.serve(async (request: Request) => {
     }
   }
 
+  async function findAuthUserByEmail(email: string) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data, error } = await admin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+
+    if (error) {
+      throw new Error("Unable to check existing Auth accounts.");
+    }
+
+    return (
+      data.users.find(
+        (candidate) => candidate.email?.trim().toLowerCase() === normalizedEmail
+      ) ?? null
+    );
+  }
+
   if (action === "cancel") {
     try {
       if (invitation.auth_user_id) {
@@ -124,7 +190,13 @@ Deno.serve(async (request: Request) => {
       }
     } catch (error) {
       return jsonResponse(
-        { ok: false, error: error instanceof Error ? error.message : "Invitation cancellation failed." },
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Invitation cancellation failed.",
+        },
         409
       );
     }
@@ -140,7 +212,10 @@ Deno.serve(async (request: Request) => {
       .eq("id", invitation.id);
 
     if (cancelError) {
-      return jsonResponse({ ok: false, error: "The invitation could not be cancelled." }, 500);
+      return jsonResponse(
+        { ok: false, error: "The invitation could not be cancelled." },
+        500
+      );
     }
 
     return jsonResponse({ ok: true, message: "Invitation cancelled." });
@@ -151,15 +226,60 @@ Deno.serve(async (request: Request) => {
       await removeUnusedAuthUser(invitation.auth_user_id);
     } catch (error) {
       return jsonResponse(
-        { ok: false, error: error instanceof Error ? error.message : "Invitation retry failed." },
+        {
+          ok: false,
+          error:
+            error instanceof Error ? error.message : "Invitation retry failed.",
+        },
         409
       );
     }
 
-    await admin
+    const { error: clearError } = await admin
       .from("access_invitations")
       .update({ auth_user_id: null, updated_at: new Date().toISOString() })
       .eq("id", invitation.id);
+
+    if (clearError) {
+      return jsonResponse(
+        { ok: false, error: "The invitation could not be prepared for retry." },
+        500
+      );
+    }
+  }
+
+  let existingAuthUser = null;
+
+  try {
+    existingAuthUser = await findAuthUserByEmail(invitation.email);
+  } catch (error) {
+    return jsonResponse(
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to check existing Auth accounts.",
+      },
+      500
+    );
+  }
+
+  if (existingAuthUser) {
+    const message =
+      "An Auth account already exists for this email address. Resolve that account before retrying the invitation.";
+
+    await admin
+      .from("access_invitations")
+      .update({
+        status: "failed",
+        auth_user_id: existingAuthUser.id,
+        last_error: message,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", invitation.id);
+
+    return jsonResponse({ ok: false, error: message }, 409);
   }
 
   const { data: inviteData, error: inviteError } =
@@ -170,11 +290,27 @@ Deno.serve(async (request: Request) => {
 
   if (inviteError || !inviteData.user) {
     const message = inviteError?.message ?? "Invitation email could not be sent.";
+    let strandedAuthUserId: string | null = null;
+
+    try {
+      const newlyCreatedUser = await findAuthUserByEmail(invitation.email);
+
+      if (newlyCreatedUser) {
+        try {
+          await removeUnusedAuthUser(newlyCreatedUser.id);
+        } catch {
+          strandedAuthUserId = newlyCreatedUser.id;
+        }
+      }
+    } catch {
+      // Preserve the original invitation failure if cleanup inspection also fails.
+    }
 
     await admin
       .from("access_invitations")
       .update({
         status: "failed",
+        auth_user_id: strandedAuthUserId,
         last_error: message,
         updated_at: new Date().toISOString(),
       })
@@ -196,10 +332,16 @@ Deno.serve(async (request: Request) => {
 
   if (updateError) {
     return jsonResponse(
-      { ok: false, error: "The invitation was sent, but its portal status could not be updated." },
+      {
+        ok: false,
+        error: "The invitation was sent, but its portal status could not be updated.",
+      },
       500
     );
   }
 
-  return jsonResponse({ ok: true, message: action === "retry" ? "Invitation resent." : "Invitation sent." });
+  return jsonResponse({
+    ok: true,
+    message: action === "retry" ? "Invitation resent." : "Invitation sent.",
+  });
 });
