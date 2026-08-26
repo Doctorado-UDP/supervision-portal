@@ -1,6 +1,6 @@
 # Supervision Portal
 
-A lightweight graduate supervision portal for managing students, individual and group supervision cases, milestones, meetings, submissions, and feedback.
+A lightweight graduate supervision portal for managing students, individual and group supervision cases, milestones, meetings, submissions, feedback, and controlled portal access.
 
 Built with **Next.js**, **Supabase**, and **Netlify**.
 
@@ -8,7 +8,7 @@ Built with **Next.js**, **Supabase**, and **Netlify**.
 
 Production: [supervision.bgonzalezbustamante.com](https://supervision.bgonzalezbustamante.com)
 
-User-facing release history is available at `/release-notes` in the deployed portal. Technical release details remain in `CHANGELOG.md`.
+User-facing release history is available publicly at `/release-notes` in the deployed portal. Technical release details remain in `CHANGELOG.md`.
 
 ## Development
 
