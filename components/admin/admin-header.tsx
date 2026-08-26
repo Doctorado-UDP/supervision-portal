@@ -3,19 +3,18 @@ import Link from "next/link";
 
 type AdminHeaderProps = {
   fullName: string;
+  globalSupervisor: boolean;
 };
 
 export default function AdminHeader({
   fullName,
+  globalSupervisor,
 }: AdminHeaderProps) {
   return (
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-6 px-6">
         <div className="flex items-center gap-8">
-          <Link
-            href="/admin"
-            className="flex items-center gap-4"
-          >
+          <Link href="/admin" className="flex items-center gap-4">
             <Image
               src="/branding/udp.png"
               alt="Universidad Diego Portales"
@@ -37,27 +36,36 @@ export default function AdminHeader({
             >
               Students
             </Link>
-
             <Link
               href="/admin/supervisions"
               className="text-sm font-medium text-gray-600 hover:text-gray-950"
             >
               Supervisions
             </Link>
-
             <Link
               href="/admin/timetable"
               className="text-sm font-medium text-gray-700 hover:text-gray-950"
             >
               Timetable
             </Link>
+            {globalSupervisor && (
+              <Link
+                href="/admin/access"
+                className="text-sm font-medium text-gray-700 hover:text-gray-950"
+              >
+                Access
+              </Link>
+            )}
           </nav>
         </div>
 
         <div className="flex items-center gap-4">
-          <span className="hidden text-sm text-gray-600 lg:inline">
+          <Link
+            href="/account"
+            className="hidden text-sm text-gray-600 underline-offset-4 hover:text-gray-950 hover:underline lg:inline"
+          >
             {fullName}
-          </span>
+          </Link>
 
           <form action="/auth/signout" method="post">
             <button
