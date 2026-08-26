@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { SUPERVISOR_EMAIL } from "@/lib/auth/require-admin";
 import { SITE_CONFIG } from "@/lib/config/site";
 import { createClient } from "@/lib/supabase/server";
 
@@ -84,6 +85,13 @@ export async function requestEmailChange(formData: FormData) {
   }
 
   const currentEmail = user.email?.trim().toLowerCase() ?? "";
+
+  if (currentEmail === SUPERVISOR_EMAIL.toLowerCase()) {
+    redirectAccount(
+      "error",
+      "The primary supervisor email is fixed because it anchors global administrative access."
+    );
+  }
 
   if (newEmail === currentEmail) {
     redirectAccount(

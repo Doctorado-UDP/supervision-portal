@@ -48,7 +48,8 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   const profile = profileResult.data;
   const user = userResult.data.user;
   const currentEmail = user.email ?? profile.email ?? "";
-  const roleLabel = isGlobalSupervisor(profile)
+  const globalSupervisor = isGlobalSupervisor(profile);
+  const roleLabel = globalSupervisor
     ? "Primary supervisor"
     : profile.role === "admin"
       ? "Staff"
@@ -157,7 +158,13 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
               </div>
             </div>
 
-            <form action={requestEmailChange} className="mt-6 max-w-xl space-y-4">
+            {globalSupervisor ? (
+              <p className="mt-5 max-w-xl text-sm leading-6 text-gray-600">
+                The primary supervisor email is fixed because it anchors global
+                administrative access.
+              </p>
+            ) : (
+              <form action={requestEmailChange} className="mt-6 max-w-xl space-y-4">
               <div>
                 <label
                   htmlFor="new_email"
@@ -184,7 +191,8 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
               >
                 Change email
               </button>
-            </form>
+              </form>
+            )}
           </section>
 
           <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
