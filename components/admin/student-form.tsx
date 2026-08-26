@@ -16,6 +16,7 @@ type AvailableProfile = {
 
 type StudentFormProps = {
   availableProfiles: AvailableProfile[];
+  defaultUserId?: string;
 };
 
 const initialState: CreateStudentState = {
@@ -24,11 +25,18 @@ const initialState: CreateStudentState = {
 
 export default function StudentForm({
   availableProfiles,
+  defaultUserId,
 }: StudentFormProps) {
   const [state, formAction, isPending] = useActionState(
     createStudent,
     initialState
   );
+
+  const initialUserId = availableProfiles.some(
+    (profile) => profile.id === defaultUserId
+  )
+    ? defaultUserId
+    : "";
 
   return (
     <form action={formAction} className="space-y-6">
@@ -37,14 +45,14 @@ export default function StudentForm({
           htmlFor="user_id"
           className="mb-2 block text-sm font-medium text-gray-700"
         >
-          Invited account
+          Invited Student account
         </label>
 
         <select
           id="user_id"
           name="user_id"
           required
-          defaultValue=""
+          defaultValue={initialUserId}
           className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-gray-500"
         >
           <option value="" disabled>
@@ -53,32 +61,16 @@ export default function StudentForm({
 
           {availableProfiles.map((profile) => (
             <option key={profile.id} value={profile.id}>
-              {profile.email ?? profile.full_name}
+              {profile.full_name}
+              {profile.email ? ` — ${profile.email}` : ""}
             </option>
           ))}
         </select>
 
         <p className="mt-2 text-xs text-gray-500">
-          Only invited student accounts that have not yet been
-          registered appear here.
+          Invited Student accounts appear here until their supervision record is
+          configured.
         </p>
-      </div>
-
-      <div>
-        <label
-          htmlFor="full_name"
-          className="mb-2 block text-sm font-medium text-gray-700"
-        >
-          Student name
-        </label>
-
-        <input
-          id="full_name"
-          name="full_name"
-          type="text"
-          required
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-gray-500"
-        />
       </div>
 
       <div>
@@ -94,7 +86,7 @@ export default function StudentForm({
           name="programme"
           type="text"
           required
-          placeholder="e.g. MSc Public Administration"
+          placeholder="e.g. PhD in Political Science"
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-gray-500"
         />
       </div>
@@ -180,7 +172,7 @@ export default function StudentForm({
           disabled={isPending || availableProfiles.length === 0}
           className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isPending ? "Creating..." : "Create student"}
+          {isPending ? "Configuring..." : "Configure student"}
         </button>
       </div>
     </form>
