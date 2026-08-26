@@ -7,6 +7,7 @@ export type ReleaseNote = {
   version: string;
   codename: string;
   status?: string;
+  releaseDate: string;
   comparison: string;
   summary: string;
   sections: ReleaseNoteSection[];
@@ -17,6 +18,7 @@ export const releases: ReleaseNote[] = [
     version: "v0.1.0-beta.4",
     codename: "Ivory Monolith",
     status: "Current beta",
+    releaseDate: "2026-08-26",
     comparison: "What changed since beta.3",
     summary:
       "Ivory Monolith makes account administration part of the portal itself, adds self-service account and password recovery tools, and makes release history easier to understand.",
@@ -72,6 +74,7 @@ export const releases: ReleaseNote[] = [
   {
     version: "v0.1.0-beta.3",
     codename: "Brisk Forge",
+    releaseDate: "2026-08-25",
     comparison: "What changed since beta.2",
     summary:
       "Brisk Forge improved the supervision record itself, making feedback richer and editable while keeping longer histories manageable.",
@@ -103,6 +106,7 @@ export const releases: ReleaseNote[] = [
   {
     version: "v0.1.0-beta.2",
     codename: "Lunar Maple",
+    releaseDate: "2026-08-24",
     comparison: "What changed since beta.1",
     summary:
       "Lunar Maple expanded day-to-day supervision management by making planning records editable and giving submissions a clearer document date.",
@@ -134,6 +138,7 @@ export const releases: ReleaseNote[] = [
   {
     version: "v0.1.0-beta.1",
     codename: "Winter Fjord",
+    releaseDate: "2026-08-21",
     comparison: "First beta release",
     summary:
       "Winter Fjord established the first production-ready Supervision Portal for students, supervision cases, planning, submissions and feedback.",
