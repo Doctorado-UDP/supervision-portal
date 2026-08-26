@@ -5,10 +5,13 @@
 ### Summary
 
 - Added a primary/global-supervisor-only Access area for viewing portal accounts and managing Student and Staff invitations.
+- Added automatic invitation acceptance tracking on Auth sign-in so completed onboarding no longer remains marked as pending.
+- Added guarded primary-supervisor-only account deletion in Access; unused accounts and empty individual Student setups can be removed while accounts with supervision history, group supervision, or Staff assignments are protected.
 - Added in-portal invitation delivery through a JWT-protected Supabase Edge Function, including retry and cancellation of unused onboarding accounts.
 - Added an invitation record that securely determines whether a new account becomes a Student or Staff profile.
 - Added invited Student accounts to the Students module immediately as setup-required records, while keeping supervision-specific configuration as a separate step.
 - Added a personal Account page for signed-in users to update their own name, request an email change, and change their password without changing portal permissions.
+- Added UDP branding to the Account page for consistency with the main portal header.
 - Added password recovery from the sign-in page with a dedicated recovery flow and non-enumerating recovery messages.
 - Added a public, plain-language Release notes page and linked the footer version/codename to it.
 - Refined the admin header with right-aligned module buttons and a clear active-module state while keeping UDP branding and the portal title on the left.
@@ -25,6 +28,8 @@
 - Staff invitations now use the same first-time password onboarding flow as Student invitations.
 - Invitation cancellation/retry refuses to remove an onboarding account once it has supervision activity or assignments.
 - The Edge Function uses Supabase's service role only inside the Supabase runtime; no service-role credential is added to Netlify or browser code.
+- Added an Auth-user sign-in trigger to reconcile managed invitations as accepted, including existing invited users who have already signed in.
+- Added the JWT-protected `delete-supervision-user` Edge Function for guarded account removal without exposing the service-role credential to the application.
 
 ### Student workflow
 
