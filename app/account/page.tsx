@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -60,9 +61,20 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900">
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex min-h-20 w-full max-w-5xl items-center justify-between gap-6 px-6">
-          <Link href={backHref} className="text-sm font-semibold text-gray-900">
-            Supervision Portal
+          <Link href={backHref} className="flex items-center gap-4">
+            <Image
+              src="/branding/udp.png"
+              alt="Universidad Diego Portales"
+              width={164}
+              height={40}
+              priority
+              className="h-auto w-auto max-w-[164px]"
+            />
+            <span className="hidden border-l border-gray-200 pl-4 text-sm font-semibold text-gray-800 sm:block">
+              Supervision Portal
+            </span>
           </Link>
+
           <Link
             href={backHref}
             className="text-sm font-medium text-gray-600 underline-offset-4 hover:text-gray-950 hover:underline"
@@ -165,32 +177,32 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
               </p>
             ) : (
               <form action={requestEmailChange} className="mt-6 max-w-xl space-y-4">
-              <div>
-                <label
-                  htmlFor="new_email"
-                  className="mb-1 block text-sm font-medium text-gray-700"
+                <div>
+                  <label
+                    htmlFor="new_email"
+                    className="mb-1 block text-sm font-medium text-gray-700"
+                  >
+                    New email address
+                  </label>
+                  <input
+                    id="new_email"
+                    name="new_email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-gray-500"
+                  />
+                </div>
+                <p className="text-xs leading-5 text-gray-500">
+                  For security, Supabase may require confirmation from both the
+                  current and new email addresses.
+                </p>
+                <button
+                  type="submit"
+                  className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
                 >
-                  New email address
-                </label>
-                <input
-                  id="new_email"
-                  name="new_email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-gray-500"
-                />
-              </div>
-              <p className="text-xs leading-5 text-gray-500">
-                For security, Supabase may require confirmation from both the
-                current and new email addresses.
-              </p>
-              <button
-                type="submit"
-                className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
-              >
-                Change email
-              </button>
+                  Change email
+                </button>
               </form>
             )}
           </section>
