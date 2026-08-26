@@ -10,7 +10,7 @@ export default function SiteFooter() {
         <p>
           <Link
             href="/release-notes"
-            className="font-medium text-gray-700 underline-offset-4 hover:text-gray-950 hover:underline"
+            className="font-semibold text-gray-700 underline-offset-4 hover:text-gray-950 hover:underline"
           >
             Supervision Portal - {currentRelease.version} &quot;
             {currentRelease.codename}&quot;
