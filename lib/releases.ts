@@ -28,6 +28,15 @@ export const releases: ReleaseNote[] = [
           "New Student and Staff invitations can be sent from inside the portal instead of requiring manual work in the Supabase dashboard.",
           "Pending invitations can be retried or cancelled before onboarding is completed.",
           "Invitation roles are recorded by the portal and applied securely when the invited account is created.",
+          "Invited Student accounts now appear immediately in Students as setup-required entries until their supervision details are configured.",
+        ],
+      },
+      {
+        title: "Students and navigation",
+        items: [
+          "The Students area now separates account invitation from supervision setup: programme, dates and status are added only when the student is configured.",
+          "The student setup form reuses the invited account name instead of asking for it a second time.",
+          "Admin module navigation is right-aligned and uses button-style tabs with a clear active state, while UDP branding and the portal title remain on the left.",
         ],
       },
       {
@@ -43,7 +52,7 @@ export const releases: ReleaseNote[] = [
         title: "Release information",
         items: [
           "Added a public Release notes page explaining each beta in user-friendly language.",
-          "The version and codename in the footer now link directly to the release history.",
+          "The version and codename in the footer now link directly to the release history and use the same bold link styling as the other footer links.",
           "Release metadata now has one shared source so the footer and release-notes page stay synchronised.",
         ],
       },
