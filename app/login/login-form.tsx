@@ -1,11 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginForm() {
+type LoginFormProps = {
+  message?: string;
+};
+
+export default function LoginForm({ message }: LoginFormProps) {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -20,7 +25,6 @@ export default function LoginForm() {
     setIsLoading(true);
 
     const supabase = createClient();
-
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -38,6 +42,12 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {message && (
+        <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          {message}
+        </p>
+      )}
+
       <div>
         <label
           htmlFor="email"
@@ -45,7 +55,6 @@ export default function LoginForm() {
         >
           Email address
         </label>
-
         <input
           id="email"
           name="email"
@@ -59,13 +68,17 @@ export default function LoginForm() {
       </div>
 
       <div>
-        <label
-          htmlFor="password"
-          className="mb-2 block text-sm font-medium text-gray-700"
-        >
-          Password
-        </label>
-
+        <div className="mb-2 flex items-center justify-between gap-4">
+          <label htmlFor="password" className="text-sm font-medium text-gray-700">
+            Password
+          </label>
+          <Link
+            href="/auth/forgot-password"
+            className="text-xs font-medium text-gray-600 underline-offset-4 hover:text-gray-950 hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <input
           id="password"
           name="password"

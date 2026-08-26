@@ -7,26 +7,17 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function PasswordForm() {
   const router = useRouter();
-
   const [password, setPassword] = useState("");
-  const [passwordConfirmation, setPasswordConfirmation] =
-    useState("");
-
-  const [errorMessage, setErrorMessage] = useState<string | null>(
-    null
-  );
-
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     setErrorMessage(null);
 
     if (password.length < 10) {
-      setErrorMessage(
-        "Your password must contain at least 10 characters."
-      );
+      setErrorMessage("Your password must contain at least 10 characters.");
       return;
     }
 
@@ -36,15 +27,24 @@ export default function PasswordForm() {
     }
 
     setIsLoading(true);
-
     const supabase = createClient();
-
-    const { error } = await supabase.auth.updateUser({
-      password,
-    });
+    const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
       setErrorMessage(error.message);
+      setIsLoading(false);
+      return;
+    }
+
+    const { error: invitationError } = await supabase.rpc(
+      "accept_own_access_invitation"
+    );
+
+    if (invitationError) {
+      console.error("Invitation acceptance update failed:", invitationError);
+      setErrorMessage(
+        "Your password was created, but the portal could not complete the invitation status. Please contact the primary supervisor."
+      );
       setIsLoading(false);
       return;
     }
@@ -62,7 +62,6 @@ export default function PasswordForm() {
         >
           Password
         </label>
-
         <input
           id="password"
           name="password"
@@ -74,10 +73,7 @@ export default function PasswordForm() {
           onChange={(event) => setPassword(event.target.value)}
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-gray-500"
         />
-
-        <p className="mt-1 text-xs text-gray-500">
-          Use at least 10 characters.
-        </p>
+        <p className="mt-1 text-xs text-gray-500">Use at least 10 characters.</p>
       </div>
 
       <div>
@@ -87,7 +83,6 @@ export default function PasswordForm() {
         >
           Confirm password
         </label>
-
         <input
           id="password-confirmation"
           name="password-confirmation"
@@ -96,9 +91,7 @@ export default function PasswordForm() {
           required
           minLength={10}
           value={passwordConfirmation}
-          onChange={(event) =>
-            setPasswordConfirmation(event.target.value)
-          }
+          onChange={(event) => setPasswordConfirmation(event.target.value)}
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-gray-500"
         />
       </div>
