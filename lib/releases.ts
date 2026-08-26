@@ -27,6 +27,8 @@ export const releases: ReleaseNote[] = [
           "Added a primary-supervisor-only Access area for viewing portal accounts and managing invitations.",
           "New Student and Staff invitations can be sent from inside the portal instead of requiring manual work in the Supabase dashboard.",
           "Pending invitations can be retried or cancelled before onboarding is completed.",
+          "Accepted invitations are now recognised automatically when the invited user first signs in, so completed onboarding no longer remains marked as pending.",
+          "The primary supervisor can delete unused accounts from Access, while accounts with supervision history, group supervision or Staff assignments are protected from accidental deletion.",
           "Invitation roles are recorded by the portal and applied securely when the invited account is created.",
           "Invited Student accounts now appear immediately in Students as setup-required entries until their supervision details are configured.",
         ],
@@ -43,6 +45,7 @@ export const releases: ReleaseNote[] = [
         title: "Personal accounts",
         items: [
           "Added an Account page where signed-in users can update their display name, request an email-address change and change their password.",
+          "The Account page uses the same UDP branding as the main portal header.",
           "Added password recovery from the sign-in page for users who can no longer access their account.",
           "Password recovery does not reveal whether a submitted email address belongs to a portal account.",
           "New and changed passwords continue to require at least 10 characters.",
