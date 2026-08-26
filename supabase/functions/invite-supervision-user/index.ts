@@ -11,6 +11,39 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+function getAllowedRedirectOrigin(value?: string) {
+  if (!value) return SITE_URL;
+
+  let url: URL;
+
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("The invitation redirect origin is invalid.");
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  const isProduction =
+    url.origin.toLowerCase() === SITE_URL.toLowerCase();
+  const isNetlifyPreview =
+    url.protocol === "https:" &&
+    hostname.endsWith("--supervision-portal.netlify.app");
+
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash ||
+    (!isProduction && !isNetlifyPreview)
+  ) {
+    throw new Error("The invitation redirect origin is not allowed.");
+  }
+
+  return url.origin;
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") {
     return jsonResponse({ ok: false, error: "Method not allowed." }, 405);
@@ -56,7 +89,11 @@ Deno.serve(async (request: Request) => {
     );
   }
 
-  let payload: { invitation_id?: string; action?: string };
+  let payload: {
+    invitation_id?: string;
+    action?: string;
+    redirect_origin?: string;
+  };
 
   try {
     payload = await request.json();
@@ -74,6 +111,23 @@ Deno.serve(async (request: Request) => {
 
   if (!invitationId) {
     return jsonResponse({ ok: false, error: "Invitation ID is required." }, 400);
+  }
+
+  let redirectOrigin: string;
+
+  try {
+    redirectOrigin = getAllowedRedirectOrigin(payload.redirect_origin?.trim());
+  } catch (error) {
+    return jsonResponse(
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "The invitation redirect origin is invalid.",
+      },
+      400
+    );
   }
 
   const { data: invitation, error: invitationError } = await admin
@@ -285,7 +339,7 @@ Deno.serve(async (request: Request) => {
   const { data: inviteData, error: inviteError } =
     await admin.auth.admin.inviteUserByEmail(invitation.email, {
       data: { full_name: invitation.full_name },
-      redirectTo: `${SITE_URL}/auth/confirm?next=/onboarding`,
+      redirectTo: `${redirectOrigin}/auth/confirm`,
     });
 
   if (inviteError || !inviteData.user) {
