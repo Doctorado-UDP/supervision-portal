@@ -1,9 +1,8 @@
 import { revalidatePath } from "next/cache";
-import { type NextRequest, NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   const supabase = await createClient();
 
   const { data: claimsData } = await supabase.auth.getClaims();
@@ -14,7 +13,10 @@ export async function POST(request: NextRequest) {
 
   revalidatePath("/", "layout");
 
-  return NextResponse.redirect(new URL("/login", request.url), {
-    status: 302,
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: "/login",
+    },
   });
 }
