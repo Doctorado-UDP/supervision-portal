@@ -15,9 +15,33 @@ export type ReleaseNote = {
 
 export const releases: ReleaseNote[] = [
   {
+    version: "v0.1.0-beta.5",
+    codename: "Spring Quartz",
+    status: "Current beta",
+    releaseDate: "2026-08-27",
+    comparison: "What changed since beta.4",
+    summary:
+      "Spring Quartz gives students more direct control over shared supervision planning and makes milestone ordering more consistent across the portal.",
+    sections: [
+      {
+        title: "Student milestones",
+        items: [
+          "Students can now add shared milestones directly from their own supervision page.",
+          "Students can edit milestone titles, descriptions, target dates and statuses for their supervision case.",
+          "Students cannot delete milestones.",
+        ],
+      },
+      {
+        title: "Timetable",
+        items: [
+          "Timetable milestones are now ordered by target date with the most recent dates first, matching the milestone ordering used in supervision views.",
+        ],
+      },
+    ],
+  },
+  {
     version: "v0.1.0-beta.4",
     codename: "Ivory Monolith",
-    status: "Current beta",
     releaseDate: "2026-08-26",
     comparison: "What changed since beta.3",
     summary:
