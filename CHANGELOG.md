@@ -1,5 +1,41 @@
 # CHANGELOG
 
+## v0.1.0-beta.5 "Spring Quartz"
+
+### Summary
+
+- Added student-facing creation and editing of shared supervision milestones from the Student supervision page.
+- Students can edit milestone title, description, target date, and status while milestone deletion remains unavailable to students.
+- Added case-membership checks in server actions and database policies so students can create and update milestones only within their own supervision case.
+- Kept student-created and student-updated milestones at case level rather than attaching them to an individual student record.
+- Changed global Timetable milestone ordering to descending target date, matching the newest-first ordering used in supervision views.
+
+### Student milestones
+
+- Added student-facing milestone creation and edit forms to the existing Student supervision page.
+- Students can update title, description, target date, and status for shared milestones in their own case.
+- Student milestone deletion remains unavailable.
+- Server actions verify that the signed-in student belongs to the target supervision case before accepting changes.
+
+### Permissions and database
+
+- Added migration `20260827102951_allow_students_manage_case_milestones.sql`.
+- Added case-member `INSERT` and `UPDATE` policies for milestones while retaining the existing supervisor controls.
+- Student-created and student-updated milestones are constrained to case-level records (`student_id IS NULL`).
+- Applied the migration to the linked hosted Supabase project before deploy-preview testing.
+
+### Timetable
+
+- Changed the global Timetable milestone query from ascending to descending `target_date`.
+- Timetable milestone ordering now matches the newest-first target-date ordering already used in supervision views.
+
+### Notes
+
+- Students can manage shared milestone content but cannot delete milestones.
+- The technical `CHANGELOG.md` remains separate from the user-facing `/release-notes` page.
+
+---
+
 ## v0.1.0-beta.4 "Ivory Monolith"
 
 ### Summary

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 
 import SiteFooter from "@/components/shared/site-footer";
 import StudentHeader from "@/components/student/student-header";
+import StudentMilestoneEditForm from "@/components/student/student-milestone-edit-form";
+import StudentMilestoneForm from "@/components/student/student-milestone-form";
 import RichFeedback from "@/components/feedback/rich-feedback";
 import PaginatedList from "@/components/shared/paginated-list";
 import SubmissionUploadForm from "@/components/submissions/submission-upload-form";
@@ -406,8 +408,9 @@ export default async function StudentPage() {
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-950">Milestones</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Shared deadlines and planned outputs for this supervision.
+              Shared deadlines and planned outputs for this supervision. You can add and edit milestones for the shared supervision record.
             </p>
+            <StudentMilestoneForm caseId={caseId} />
             <PaginatedList className="mt-5 space-y-4" ariaLabel="Milestones pagination">
               {milestones.length === 0 ? (
                 <p className="text-sm text-gray-500">No milestones.</p>
@@ -431,6 +434,10 @@ export default async function StudentPage() {
                         {milestone.description}
                       </p>
                     )}
+                    <StudentMilestoneEditForm
+                      caseId={caseId}
+                      milestone={milestone}
+                    />
                   </div>
                 ))
               )}

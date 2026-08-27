@@ -62,7 +62,7 @@ export default async function TimetablePage() {
       .order(
         "target_date",
         {
-          ascending: true,
+          ascending: false,
         }
       ),
 
