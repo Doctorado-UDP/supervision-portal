@@ -5,15 +5,30 @@ export type ReleaseNoteSection = {
 
 export type ReleaseNote = {
   version: string;
-  codename: string;
+  codename?: string;
   status?: string;
-  releaseDate: string;
+  releaseDate?: string;
   comparison: string;
   summary: string;
   sections: ReleaseNoteSection[];
 };
 
 export const releases: ReleaseNote[] = [
+  {
+    version: "v0.1.0-beta.6",
+    status: "In development",
+    comparison: "Ongoing development since beta.5",
+    summary:
+      "Beta.6 development has started. This release is still in progress, with further changes planned and its release date and codename to be confirmed.",
+    sections: [
+      {
+        title: "Navigation and accounts",
+        items: [
+          "Standardised the Account link in the student header so it uses the same bordered control styling as supervisor and staff/admin accounts.",
+        ],
+      },
+    ],
+  },
   {
     version: "v0.1.0-beta.5",
     codename: "Spring Quartz",
@@ -187,4 +202,5 @@ export const releases: ReleaseNote[] = [
   },
 ];
 
-export const currentRelease = releases[0];
+export const currentRelease =
+  releases.find((release) => release.status === "Current beta") ?? releases[0];

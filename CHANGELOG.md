@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## v0.1.0-beta.6 — in development
+
+### Status
+
+- Beta.6 development has started and is ongoing.
+- The release date and codename are to be confirmed.
+- Additional beta.6 changes will be added to this section as development continues.
+- Beta.5 remains the current released beta and continues to be shown in the portal footer until beta.6 is released.
+
+### Navigation and accounts
+
+- Standardised the Student header Account link so it uses the same bordered control styling as supervisor and staff/admin accounts.
+
+---
+
 ## v0.1.0-beta.5 "Spring Quartz"
 
 ### Summary
