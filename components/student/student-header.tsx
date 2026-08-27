@@ -27,7 +27,7 @@ export default function StudentHeader({ fullName }: StudentHeaderProps) {
         <div className="flex items-center gap-4">
           <Link
             href="/account"
-            className="text-sm text-gray-600 underline-offset-4 hover:text-gray-950 hover:underline"
+            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 hover:text-gray-950"
           >
             <span className="sm:hidden">Account</span>
             <span className="hidden sm:inline">{fullName}</span>
