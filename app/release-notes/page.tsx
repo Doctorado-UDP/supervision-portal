@@ -69,7 +69,12 @@ export default function ReleaseNotesPage() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-2xl font-semibold text-gray-950">
-                        {release.version} &quot;{release.codename}&quot;
+                        {release.version}
+                        {release.codename && (
+                          <>
+                            {" "}&quot;{release.codename}&quot;
+                          </>
+                        )}
                       </h2>
 
                       {release.status && (
@@ -79,7 +84,9 @@ export default function ReleaseNotesPage() {
                       )}
 
                       <span className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600">
-                        {formatReleaseDate(release.releaseDate)}
+                        {release.releaseDate
+                          ? formatReleaseDate(release.releaseDate)
+                          : "Release date TBC"}
                       </span>
                     </div>
 
