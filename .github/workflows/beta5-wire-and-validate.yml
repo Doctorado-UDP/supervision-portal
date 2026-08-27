@@ -1,0 +1,124 @@
+name: Beta 5 wire and validate
+
+on:
+  push:
+    branches:
+      - feature/beta5-student-milestones-timetable-order
+
+permissions:
+  contents: write
+
+jobs:
+  wire-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/beta5-student-milestones-timetable-order
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Wire student milestone UI and timetable ordering
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          student_path = Path("app/student/page.tsx")
+          text = student_path.read_text()
+
+          old_imports = '''import SiteFooter from "@/components/shared/site-footer";
+          import StudentHeader from "@/components/student/student-header";
+          import RichFeedback from "@/components/feedback/rich-feedback";
+          import PaginatedList from "@/components/shared/paginated-list";
+          import SubmissionUploadForm from "@/components/submissions/submission-upload-form";
+          '''
+          new_imports = '''import SiteFooter from "@/components/shared/site-footer";
+          import StudentHeader from "@/components/student/student-header";
+          import StudentMilestoneEditForm from "@/components/student/student-milestone-edit-form";
+          import StudentMilestoneForm from "@/components/student/student-milestone-form";
+          import RichFeedback from "@/components/feedback/rich-feedback";
+          import PaginatedList from "@/components/shared/paginated-list";
+          import SubmissionUploadForm from "@/components/submissions/submission-upload-form";
+          '''
+          if old_imports not in text:
+              raise SystemExit("Student import block not found")
+          text = text.replace(old_imports, new_imports, 1)
+
+          old_intro = '''            <p className="mt-1 text-sm text-gray-500">
+                        Shared deadlines and planned outputs for this supervision.
+                      </p>
+                      <PaginatedList className="mt-5 space-y-4" ariaLabel="Milestones pagination">
+          '''
+          new_intro = '''            <p className="mt-1 text-sm text-gray-500">
+                        Shared deadlines and planned outputs for this supervision. You can add and edit milestones for the shared supervision record.
+                      </p>
+                      <StudentMilestoneForm caseId={caseId} />
+                      <PaginatedList className="mt-5 space-y-4" ariaLabel="Milestones pagination">
+          '''
+          if old_intro not in text:
+              raise SystemExit("Student milestone intro block not found")
+          text = text.replace(old_intro, new_intro, 1)
+
+          old_item = '''                    {milestone.description && (
+                                <p className="mt-2 whitespace-pre-wrap text-sm text-gray-600">
+                                  {milestone.description}
+                                </p>
+                              )}
+                            </div>
+          '''
+          new_item = '''                    {milestone.description && (
+                                <p className="mt-2 whitespace-pre-wrap text-sm text-gray-600">
+                                  {milestone.description}
+                                </p>
+                              )}
+                              <StudentMilestoneEditForm
+                                caseId={caseId}
+                                milestone={milestone}
+                              />
+                            </div>
+          '''
+          if old_item not in text:
+              raise SystemExit("Student milestone item block not found")
+          text = text.replace(old_item, new_item, 1)
+
+          student_path.write_text(text)
+
+          timetable_path = Path("app/admin/timetable/page.tsx")
+          timetable = timetable_path.read_text()
+          old_order = '''      .order(
+                  "target_date",
+                  {
+                    ascending: true,
+                  }
+                ),
+          '''
+          new_order = '''      .order(
+                  "target_date",
+                  {
+                    ascending: false,
+                  }
+                ),
+          '''
+          if old_order not in timetable:
+              raise SystemExit("Timetable milestone ordering block not found")
+          timetable_path.write_text(timetable.replace(old_order, new_order, 1))
+          PY
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: git diff --check
+
+      - name: Commit validated changes and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/beta5-wire-and-validate.yml
+          git add app/student/page.tsx app/admin/timetable/page.tsx
+          git commit -m "Enable student milestone editing and newest-first timetable"
+          git push origin HEAD:feature/beta5-student-milestones-timetable-order
