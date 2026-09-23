@@ -11,6 +11,10 @@ import SubmissionUploadForm from "@/components/submissions/submission-upload-for
 
 import { SITE_CONFIG } from "@/lib/config/site";
 import { formatPortalDateTime } from "@/lib/datetime/format";
+import {
+  sortMeetingsForWorkspace,
+  sortMilestonesForWorkspace,
+} from "@/lib/planning/order";
 import { createClient } from "@/lib/supabase/server";
 
 function formatBytes(bytes: number) {
@@ -135,13 +139,11 @@ export default async function StudentPage() {
     supabase
       .from("milestones")
       .select("id, title, description, target_date, status")
-      .eq("case_id", caseId)
-      .order("target_date", { ascending: false }),
+      .eq("case_id", caseId),
     supabase
       .from("meetings")
       .select("id, scheduled_at, notes")
-      .eq("case_id", caseId)
-      .order("scheduled_at", { ascending: false }),
+      .eq("case_id", caseId),
   ]);
 
   if (
@@ -165,8 +167,8 @@ export default async function StudentPage() {
   const supervisionCase = supervisionCaseResult.data;
   const casePeople = (casePeopleResult.data ?? []) as CasePerson[];
   const submissions = submissionsResult.data ?? [];
-  const milestones = milestonesResult.data ?? [];
-  const meetings = meetingsResult.data ?? [];
+  const milestones = sortMilestonesForWorkspace(milestonesResult.data ?? []);
+  const meetings = sortMeetingsForWorkspace(meetingsResult.data ?? []);
 
   const caseStudents = casePeople.filter(
     (person) => person.participant_type === "student"
