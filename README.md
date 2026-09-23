@@ -4,13 +4,13 @@ A lightweight graduate supervision portal for managing students, individual and 
 
 Built with **Next.js**, **Supabase**, and **Netlify**.
 
-**Current version:** `v0.1.0-beta.5 "Spring Quartz"`
+**Current version:** `v0.1.0-beta.6 "Rustic Peak"`
 
 Production: [supervision.bgonzalezbustamante.com](https://supervision.bgonzalezbustamante.com)
 
 User-facing release history is available publicly at `/release-notes` in the deployed portal. Technical release details remain in `CHANGELOG.md`.
 
-Beta.5 gives students direct control over shared supervision milestones in their own case and keeps Timetable milestone ordering newest-first by target date.
+Beta.6 improves supervision-workspace ordering for milestones and meetings, standardises account navigation across roles, and hardens Supabase Data API defaults for future database objects.
 
 ## Development
 
