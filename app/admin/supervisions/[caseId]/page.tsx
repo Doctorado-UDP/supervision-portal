@@ -14,6 +14,10 @@ import {
 } from "@/lib/auth/require-admin";
 import { SITE_CONFIG } from "@/lib/config/site";
 import { formatPortalDateTime } from "@/lib/datetime/format";
+import {
+  sortMeetingsForWorkspace,
+  sortMilestonesForWorkspace,
+} from "@/lib/planning/order";
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -63,13 +67,11 @@ export default async function SupervisionPage({ params }: SupervisionPageProps) 
       supabase
         .from("milestones")
         .select("id, title, description, target_date, status, completed_at")
-        .eq("case_id", caseId)
-        .order("target_date", { ascending: false }),
+        .eq("case_id", caseId),
       supabase
         .from("meetings")
         .select("id, scheduled_at, notes, created_by")
-        .eq("case_id", caseId)
-        .order("scheduled_at", { ascending: false }),
+        .eq("case_id", caseId),
     ]);
 
   if (caseResult.error) {
@@ -99,8 +101,8 @@ export default async function SupervisionPage({ params }: SupervisionPageProps) 
   const supervisionCase = caseResult.data;
   const memberships = membersResult.data ?? [];
   const caseStaff = staffResult.data ?? [];
-  const milestones = milestonesResult.data ?? [];
-  const meetings = meetingsResult.data ?? [];
+  const milestones = sortMilestonesForWorkspace(milestonesResult.data ?? []);
+  const meetings = sortMeetingsForWorkspace(meetingsResult.data ?? []);
 
   const studentIds = memberships.map((membership) => membership.student_id);
   let students: { id: string; user_id: string }[] = [];
