@@ -1,17 +1,45 @@
 # CHANGELOG
 
-## v0.1.0-beta.6 — in development
+## v0.1.0-beta.6 "Rustic Peak"
 
-### Status
+### Summary
 
-- Beta.6 development has started and is ongoing.
-- The release date and codename are to be confirmed.
-- Additional beta.6 changes will be added to this section as development continues.
-- Beta.5 remains the current released beta and continues to be shown in the portal footer until beta.6 is released.
+- Standardised the Student header Account link so it uses the same bordered control styling as supervisor and staff/admin accounts.
+- Fixed sign-out redirects so users remain on the current public or preview host instead of being sent to a Netlify atomic deploy permalink.
+- Reordered milestones in supervision workspaces so upcoming targets appear nearest first, overdue open milestones follow, and completed milestones are moved to the bottom.
+- Reordered supervision meetings so upcoming meetings appear nearest first and past meetings are grouped below them with the most recent past meeting first.
+- Hardened Supabase Data API default privileges ahead of the 30 October 2026 platform change so future public-schema objects require explicit API grants.
+- Removed unnecessary anonymous execution access from two authenticated `SECURITY DEFINER` application RPCs while preserving existing application access.
+
+### Supervision workspace
+
+- Added shared ordering logic used by both supervisor/staff and Student supervision views.
+- Non-completed milestones with upcoming target dates are ordered ascending so the nearest target appears first.
+- Overdue non-completed milestones follow upcoming milestones, with the most recently overdue target first.
+- Completed milestones are kept at the bottom of the list.
+- Upcoming supervision meetings are ordered chronologically with the nearest meeting first.
+- Past meetings follow upcoming meetings, with the most recent past meeting first.
+- Global Timetable ordering is unchanged.
 
 ### Navigation and accounts
 
-- Standardised the Student header Account link so it uses the same bordered control styling as supervisor and staff/admin accounts.
+- Standardised the Student Account link with the bordered button treatment already used for supervisor and staff/admin accounts.
+- Changed the sign-out Route Handler to return a relative `Location: /login` redirect after the sign-out POST, using HTTP 303 so Netlify deployment permalinks do not leak into the browser URL.
+
+### Data API and security
+
+- Added migration `20260923223924_harden_data_api_default_privileges.sql`, already applied to the production Supabase project as `20260923223924_harden_data_api_default_privileges`.
+- Revoked default table CRUD privileges for `anon`, `authenticated`, and `service_role` on future objects created in the `public` schema; future grants must be explicit in migrations.
+- Revoked default function `EXECUTE` privileges for API roles and restricted default sequence privileges for future public-schema objects.
+- Existing table privileges were left untouched, so the current application remains unaffected by the default-privilege change.
+- Removed unnecessary anonymous `EXECUTE` access from `admin_configure_supervision_case(...)` and `get_case_people(uuid)`.
+- Verified after migration that Supabase no longer reports the previous anonymous `SECURITY DEFINER` execution warnings.
+- Remaining authenticated `SECURITY DEFINER` notices correspond to deliberate application RPCs with internal authorisation checks and were not changed.
+
+### Notes
+
+- The Supabase hardening migration was applied to production before this release.
+- The technical `CHANGELOG.md` remains more detailed than the user-facing `/release-notes` page.
 
 ---
 
