@@ -10,6 +10,7 @@
 - Reordered supervision meetings so upcoming meetings appear nearest first and past meetings are grouped below them with the most recent past meeting first.
 - Hardened Supabase Data API default privileges ahead of the 30 October 2026 platform change so future public-schema objects require explicit API grants.
 - Removed unnecessary anonymous execution access from two authenticated `SECURITY DEFINER` application RPCs while preserving existing application access.
+- Updated Next.js from `16.3.1` to `16.3.6` to incorporate upstream security fixes while keeping the framework version exactly pinned.
 
 ### Supervision workspace
 
@@ -35,6 +36,7 @@
 - Removed unnecessary anonymous `EXECUTE` access from `admin_configure_supervision_case(...)` and `get_case_people(uuid)`.
 - Verified after migration that Supabase no longer reports the previous anonymous `SECURITY DEFINER` execution warnings.
 - Remaining authenticated `SECURITY DEFINER` notices correspond to deliberate application RPCs with internal authorisation checks and were not changed.
+- Updated Next.js from `16.3.1` to `16.3.6`; `npm audit`, lint, and the production build were verified successfully after the update.
 
 ### Notes
 
