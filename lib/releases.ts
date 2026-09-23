@@ -44,6 +44,7 @@ export const releases: ReleaseNote[] = [
           "Adopted Supabase's safer Data API defaults ahead of the October 2026 platform change, so future database objects must be explicitly exposed to application roles.",
           "Existing table access was left unchanged, so the hardening does not disrupt the current portal.",
           "Removed unnecessary anonymous access to two internal supervision operations and verified that the corresponding Supabase security warnings were cleared.",
+          "Updated Next.js to 16.3.6 to incorporate upstream security fixes while keeping the framework version pinned.",
         ],
       },
     ],
