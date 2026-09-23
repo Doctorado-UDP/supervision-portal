@@ -16,15 +16,34 @@ export type ReleaseNote = {
 export const releases: ReleaseNote[] = [
   {
     version: "v0.1.0-beta.6",
-    status: "In development",
-    comparison: "Ongoing development since beta.5",
+    codename: "Rustic Peak",
+    status: "Current beta",
+    releaseDate: "2026-09-24",
+    comparison: "What changed since beta.5",
     summary:
-      "Beta.6 development has started. This release is still in progress, with further changes planned and its release date and codename to be confirmed.",
+      "Rustic Peak improves day-to-day supervision planning, makes account navigation more consistent, and strengthens the portal's Supabase Data API security defaults.",
     sections: [
+      {
+        title: "Planning and meetings",
+        items: [
+          "Milestones now prioritise upcoming target dates, with the nearest deadline first; overdue open milestones follow and completed milestones are kept at the bottom.",
+          "Upcoming supervision meetings now appear nearest first, while past meetings are grouped below them with the most recent past meeting first.",
+          "The same ordering is used in supervisor, staff and Student supervision views.",
+        ],
+      },
       {
         title: "Navigation and accounts",
         items: [
-          "Standardised the Account link in the student header so it uses the same bordered control styling as supervisor and staff/admin accounts.",
+          "The Student Account link now uses the same bordered control styling as supervisor and staff accounts.",
+          "Signing out now keeps users on the correct production or preview host instead of exposing a Netlify deployment-specific address.",
+        ],
+      },
+      {
+        title: "Security and platform",
+        items: [
+          "Adopted Supabase's safer Data API defaults ahead of the October 2026 platform change, so future database objects must be explicitly exposed to application roles.",
+          "Existing table access was left unchanged, so the hardening does not disrupt the current portal.",
+          "Removed unnecessary anonymous access to two internal supervision operations and verified that the corresponding Supabase security warnings were cleared.",
         ],
       },
     ],
@@ -32,7 +51,6 @@ export const releases: ReleaseNote[] = [
   {
     version: "v0.1.0-beta.5",
     codename: "Spring Quartz",
-    status: "Current beta",
     releaseDate: "2026-08-27",
     comparison: "What changed since beta.4",
     summary:
