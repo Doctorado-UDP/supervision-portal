@@ -19,16 +19,37 @@ export type ReleaseNote = {
 export const releases: ReleaseNote[] = [
   {
     version: "v0.1.0-beta.7",
-    status: "In development",
-    comparison: "Ongoing development since beta.6",
+    codename: "Autumn Forge",
+    status: "Current beta",
+    releaseDate: "2026-11-03",
+    comparison: "What changed since beta.6",
     summary:
-      "Beta.7 development has started. This release is still in progress, with further changes planned and its release date and codename to be confirmed.",
+      "Autumn Forge is a security-focused release: it updates the portal's framework to fix critical upstream vulnerabilities, tightens access controls and sign-in links, and lets meeting times be entered and read in both Santiago and Amsterdam time.",
     sections: [
       {
         title: "Security and platform",
         items: [
-          "Updated Next.js to 16.4.4 to incorporate upstream security fixes while keeping the framework version pinned.",
+          "Updated Next.js to 16.4.5 to incorporate upstream security fixes, including two critical vulnerabilities and the November 2026 security release, while keeping the framework version pinned.",
           "Updated supporting packages so the portal's production dependencies report no high or critical security advisories.",
+          "Added browser security protections to every page and asked search engines not to index the portal.",
+          "Password-reset and invitation links now always return to the portal's own address.",
+          "Tightened database and file-storage permissions, and recorded the portal's file access rules alongside its code.",
+          "Uploaded documents are now limited to PDF and Word files at the storage level as well as in the upload form.",
+        ],
+      },
+      {
+        title: "Meetings and dates",
+        items: [
+          "Meeting times can be entered in Santiago or Amsterdam time, and every meeting is shown in both.",
+          "Milestone completion dates now follow the Santiago calendar date and are no longer reset when a completed milestone is edited.",
+        ],
+      },
+      {
+        title: "Accounts and access",
+        items: [
+          "Fixed password recovery links that could report an error even though the link was valid.",
+          "Cancelling or retrying an invitation can no longer remove an account that existed before the invitation.",
+          "Error messages for passwords, uploads and edits are clearer, and edits that are not permitted now say so instead of appearing to succeed.",
         ],
       },
     ],
@@ -36,7 +57,6 @@ export const releases: ReleaseNote[] = [
   {
     version: "v0.1.0-beta.6",
     codename: "Rustic Peak",
-    status: "Current beta",
     releaseDate: "2026-09-24",
     comparison: "What changed since beta.5",
     summary:
