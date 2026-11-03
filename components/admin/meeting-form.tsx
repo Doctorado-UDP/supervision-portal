@@ -1,14 +1,12 @@
 "use client";
 
-import {
-  useActionState,
-  useState,
-} from "react";
+import { useActionState } from "react";
 
 import {
   createMeeting,
   type PlanningActionState,
 } from "@/app/admin/supervisions/[caseId]/actions";
+import ZonedDateTimeField from "@/components/shared/zoned-date-time-field";
 
 type MeetingFormProps = {
   caseId: string;
@@ -23,11 +21,6 @@ export default function MeetingForm({
   caseId,
 }: MeetingFormProps) {
   const [
-    localDateTime,
-    setLocalDateTime,
-  ] = useState("");
-
-  const [
     state,
     formAction,
     isPending,
@@ -35,13 +28,6 @@ export default function MeetingForm({
     createMeeting,
     initialState
   );
-
-  const isoDateTime =
-    localDateTime.length > 0
-      ? new Date(
-          localDateTime
-        ).toISOString()
-      : "";
 
   return (
     <form
@@ -54,33 +40,10 @@ export default function MeetingForm({
         value={caseId}
       />
 
-      <input
-        type="hidden"
-        name="scheduled_at"
-        value={isoDateTime}
+      <ZonedDateTimeField
+        name="scheduled_local"
+        label="Date and time"
       />
-
-      <div>
-        <label
-          htmlFor="meeting-date"
-          className="mb-2 block text-sm font-medium text-gray-700"
-        >
-          Date and time
-        </label>
-
-        <input
-          id="meeting-date"
-          type="datetime-local"
-          required
-          value={localDateTime}
-          onChange={(event) =>
-            setLocalDateTime(
-              event.target.value
-            )
-          }
-          className="w-full rounded-md border border-gray-300 px-3 py-2"
-        />
-      </div>
 
       <div>
         <label
@@ -113,10 +76,7 @@ export default function MeetingForm({
 
       <button
         type="submit"
-        disabled={
-          isPending ||
-          !localDateTime
-        }
+        disabled={isPending}
         className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
       >
         {isPending

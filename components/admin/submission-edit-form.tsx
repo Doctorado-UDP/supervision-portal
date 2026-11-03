@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId } from "react";
 
 import {
   updateSubmissionMetadata,
   type SubmissionActionState,
 } from "@/app/admin/supervisions/[caseId]/actions";
+import ZonedDateTimeField from "@/components/shared/zoned-date-time-field";
 
 type SubmissionEditFormProps = {
   caseId: string;
@@ -21,29 +22,15 @@ const initialState: SubmissionActionState = {
   success: null,
 };
 
-function toLocalDateTimeInput(value: string) {
-  const date = new Date(value);
-  const offset = date.getTimezoneOffset();
-  const local = new Date(date.getTime() - offset * 60 * 1000);
-  return local.toISOString().slice(0, 16);
-}
-
 export default function SubmissionEditForm({
   caseId,
   submission,
 }: SubmissionEditFormProps) {
-  const [localDateTime, setLocalDateTime] = useState(
-    toLocalDateTimeInput(submission.submitted_at)
-  );
-
+  const originalDateId = useId();
   const [state, formAction, isPending] = useActionState(
     updateSubmissionMetadata,
     initialState
   );
-
-  const isoDateTime = localDateTime
-    ? new Date(localDateTime).toISOString()
-    : "";
 
   return (
     <details className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3">
@@ -54,13 +41,16 @@ export default function SubmissionEditForm({
       <form action={formAction} className="mt-4 space-y-3">
         <input type="hidden" name="case_id" value={caseId} />
         <input type="hidden" name="submission_id" value={submission.id} />
-        <input type="hidden" name="submitted_at" value={isoDateTime} />
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-700">
+          <label
+            htmlFor={originalDateId}
+            className="mb-1 block text-xs font-medium text-gray-700"
+          >
             Original date
           </label>
           <input
+            id={originalDateId}
             name="original_date"
             type="date"
             required
@@ -69,18 +59,12 @@ export default function SubmissionEditForm({
           />
         </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-700">
-            Submission date and time
-          </label>
-          <input
-            type="datetime-local"
-            required
-            value={localDateTime}
-            onChange={(event) => setLocalDateTime(event.target.value)}
-            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
-          />
-        </div>
+        <ZonedDateTimeField
+          name="submitted_local"
+          label="Submission date and time"
+          initialValue={submission.submitted_at}
+          compact
+        />
 
         {state.error && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
@@ -96,7 +80,7 @@ export default function SubmissionEditForm({
 
         <button
           type="submit"
-          disabled={isPending || !localDateTime}
+          disabled={isPending}
           className="rounded-md bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700 disabled:opacity-50"
         >
           {isPending ? "Saving..." : "Save dates"}

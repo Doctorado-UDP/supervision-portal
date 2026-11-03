@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getPortalDateKey } from "@/lib/datetime/format";
 import { createClient } from "@/lib/supabase/server";
 
 export type StudentMilestoneActionState = {
@@ -85,8 +86,7 @@ export async function createStudentMilestone(
     };
   }
 
-  const completedAt =
-    status === "completed" ? new Date().toISOString().slice(0, 10) : null;
+  const completedAt = status === "completed" ? getPortalDateKey() : null;
 
   const { error } = await context.supabase.from("milestones").insert({
     case_id: caseId,
@@ -135,8 +135,25 @@ export async function updateStudentMilestone(
     };
   }
 
+  const { data: existing, error: existingError } = await context.supabase
+    .from("milestones")
+    .select("status, completed_at")
+    .eq("id", milestoneId)
+    .eq("case_id", caseId)
+    .maybeSingle();
+
+  if (existingError || !existing) {
+    console.error(existingError);
+    return { error: "Unable to update the milestone.", success: null };
+  }
+
+  // The Santiago date on which it became completed; kept on later edits.
   const completedAt =
-    status === "completed" ? new Date().toISOString().slice(0, 10) : null;
+    status !== "completed"
+      ? null
+      : existing.status === "completed" && existing.completed_at
+        ? existing.completed_at
+        : getPortalDateKey();
 
   const { data, error } = await context.supabase
     .from("milestones")

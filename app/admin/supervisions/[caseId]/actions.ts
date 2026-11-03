@@ -6,6 +6,11 @@ import {
   requireAdmin,
   requireGlobalSupervisor,
 } from "@/lib/auth/require-admin";
+import {
+  getPortalDateKey,
+  isMeetingTimeZone,
+  zonedWallTimeToUtc,
+} from "@/lib/datetime/format";
 import { createClient } from "@/lib/supabase/server";
 
 export type PlanningActionState = {
@@ -29,6 +34,45 @@ const allowedMilestoneStatuses = [
   "completed",
   "cancelled",
 ];
+
+// completed_at is the Santiago date on which a milestone became completed. It
+// is kept when an already completed milestone is edited.
+function getCompletedAt(
+  status: string,
+  previous?: { status: string; completed_at: string | null } | null
+) {
+  if (status !== "completed") {
+    return null;
+  }
+
+  if (previous?.status === "completed" && previous.completed_at) {
+    return previous.completed_at;
+  }
+
+  return getPortalDateKey();
+}
+
+// Reads a datetime-local value and its zone from a meeting or submission form.
+function readZonedDateTime(
+  formData: FormData,
+  valueField: string
+) {
+  const local = String(formData.get(valueField) ?? "").trim();
+  const timeZone = String(formData.get("time_zone") ?? "").trim();
+
+  if (!local) {
+    return { date: null, error: "missing" as const };
+  }
+
+  if (!isMeetingTimeZone(timeZone)) {
+    return { date: null, error: "zone" as const };
+  }
+
+  const date = zonedWallTimeToUtc(local, timeZone);
+  return date
+    ? { date, error: null }
+    : { date: null, error: "invalid" as const };
+}
 
 function revalidateSupervisionPages(
   caseId: string
@@ -126,17 +170,26 @@ export async function updateFeedback(
     };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("feedback")
     .update({
       feedback_text: feedbackText,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", feedbackId);
+    .eq("id", feedbackId)
+    .select("id");
 
   if (error) {
     console.error(error);
     return { error: "Unable to update feedback.", success: null };
+  }
+
+  // RLS filters out rows the caller may not change, which is not an error.
+  if (!updated || updated.length === 0) {
+    return {
+      error: "This feedback could not be updated. Only its author can edit it.",
+      success: null,
+    };
   }
 
   revalidateSupervisionPages(caseId);
@@ -163,9 +216,7 @@ export async function createMilestone(
     return { error: "The selected milestone status is invalid.", success: null };
   }
 
-  const completedAt = status === "completed"
-    ? new Date().toISOString().slice(0, 10)
-    : null;
+  const completedAt = getCompletedAt(status);
 
   const { error } = await supabase.from("milestones").insert({
     case_id: caseId,
@@ -207,26 +258,45 @@ export async function updateMilestone(
     return { error: "The selected milestone status is invalid.", success: null };
   }
 
-  const completedAt = status === "completed"
-    ? new Date().toISOString().slice(0, 10)
-    : null;
+  const { data: existing, error: existingError } = await supabase
+    .from("milestones")
+    .select("status, completed_at")
+    .eq("id", milestoneId)
+    .eq("case_id", caseId)
+    .maybeSingle();
 
-  const { error } = await supabase
+  if (existingError || !existing) {
+    console.error(existingError);
+    return {
+      error: "The milestone could not be found in this supervision.",
+      success: null,
+    };
+  }
+
+  const { data: updated, error } = await supabase
     .from("milestones")
     .update({
       title,
       description: description || null,
       target_date: targetDate,
       status,
-      completed_at: completedAt,
+      completed_at: getCompletedAt(status, existing),
       updated_at: new Date().toISOString(),
     })
     .eq("id", milestoneId)
-    .eq("case_id", caseId);
+    .eq("case_id", caseId)
+    .select("id");
 
   if (error) {
     console.error(error);
     return { error: "Unable to update the milestone.", success: null };
+  }
+
+  if (!updated || updated.length === 0) {
+    return {
+      error: "The milestone could not be updated in this supervision.",
+      success: null,
+    };
   }
 
   revalidateSupervisionPages(caseId);
@@ -244,22 +314,31 @@ export async function updateMilestoneStatus(formData: FormData) {
     return;
   }
 
-  const completedAt = status === "completed"
-    ? new Date().toISOString().slice(0, 10)
-    : null;
+  const { data: existing, error: existingError } = await supabase
+    .from("milestones")
+    .select("status, completed_at")
+    .eq("id", milestoneId)
+    .eq("case_id", caseId)
+    .maybeSingle();
 
-  const { error } = await supabase
+  if (existingError || !existing) {
+    console.error(existingError ?? "Milestone not found for status update.");
+    return;
+  }
+
+  const { data: updated, error } = await supabase
     .from("milestones")
     .update({
       status,
-      completed_at: completedAt,
+      completed_at: getCompletedAt(status, existing),
       updated_at: new Date().toISOString(),
     })
     .eq("id", milestoneId)
-    .eq("case_id", caseId);
+    .eq("case_id", caseId)
+    .select("id");
 
-  if (error) {
-    console.error(error);
+  if (error || !updated || updated.length === 0) {
+    console.error(error ?? "Milestone status update matched no row.");
     return;
   }
 
@@ -276,14 +355,15 @@ export async function deleteMilestone(formData: FormData) {
     return;
   }
 
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from("milestones")
     .delete()
     .eq("id", milestoneId)
-    .eq("case_id", caseId);
+    .eq("case_id", caseId)
+    .select("id");
 
-  if (error) {
-    console.error(error);
+  if (error || !deleted || deleted.length === 0) {
+    console.error(error ?? "Milestone deletion matched no row.");
     return;
   }
 
@@ -297,22 +377,28 @@ export async function createMeeting(
   const admin = await requireAdmin();
   const supabase = await createClient();
   const caseId = String(formData.get("case_id") ?? "").trim();
-  const scheduledAt = String(formData.get("scheduled_at") ?? "").trim();
+  const scheduled = readZonedDateTime(formData, "scheduled_local");
   const notes = String(formData.get("notes") ?? "").trim();
 
-  if (!caseId || !scheduledAt) {
+  if (!caseId || scheduled.error === "missing") {
     return { error: "Meeting date and time are required.", success: null };
   }
 
-  const parsedDate = new Date(scheduledAt);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return { error: "The meeting date is invalid.", success: null };
+  if (scheduled.error === "zone") {
+    return { error: "Choose Santiago or Amsterdam time.", success: null };
+  }
+
+  if (!scheduled.date) {
+    return {
+      error: "The meeting time is invalid or does not exist in the chosen time zone.",
+      success: null,
+    };
   }
 
   const { error } = await supabase.from("meetings").insert({
     case_id: caseId,
     student_id: null,
-    scheduled_at: parsedDate.toISOString(),
+    scheduled_at: scheduled.date.toISOString(),
     notes: notes || null,
     created_by: admin.id,
   });
@@ -334,31 +420,45 @@ export async function updateMeeting(
   const supabase = await createClient();
   const caseId = String(formData.get("case_id") ?? "").trim();
   const meetingId = String(formData.get("meeting_id") ?? "").trim();
-  const scheduledAt = String(formData.get("scheduled_at") ?? "").trim();
+  const scheduled = readZonedDateTime(formData, "scheduled_local");
   const notes = String(formData.get("notes") ?? "").trim();
 
-  if (!caseId || !meetingId || !scheduledAt) {
+  if (!caseId || !meetingId || scheduled.error === "missing") {
     return { error: "Meeting date and time are required.", success: null };
   }
 
-  const parsedDate = new Date(scheduledAt);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return { error: "The meeting date is invalid.", success: null };
+  if (scheduled.error === "zone") {
+    return { error: "Choose Santiago or Amsterdam time.", success: null };
   }
 
-  const { error } = await supabase
+  if (!scheduled.date) {
+    return {
+      error: "The meeting time is invalid or does not exist in the chosen time zone.",
+      success: null,
+    };
+  }
+
+  const { data: updated, error } = await supabase
     .from("meetings")
     .update({
-      scheduled_at: parsedDate.toISOString(),
+      scheduled_at: scheduled.date.toISOString(),
       notes: notes || null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", meetingId)
-    .eq("case_id", caseId);
+    .eq("case_id", caseId)
+    .select("id");
 
   if (error) {
     console.error(error);
     return { error: "Unable to update the meeting.", success: null };
+  }
+
+  if (!updated || updated.length === 0) {
+    return {
+      error: "The meeting could not be updated in this supervision.",
+      success: null,
+    };
   }
 
   revalidateSupervisionPages(caseId);
@@ -375,14 +475,15 @@ export async function deleteMeeting(formData: FormData) {
     return;
   }
 
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from("meetings")
     .delete()
     .eq("id", meetingId)
-    .eq("case_id", caseId);
+    .eq("case_id", caseId)
+    .select("id");
 
-  if (error) {
-    console.error(error);
+  if (error || !deleted || deleted.length === 0) {
+    console.error(error ?? "Meeting deletion matched no row.");
     return;
   }
 
@@ -397,30 +498,53 @@ export async function updateSubmissionMetadata(
   const supabase = await createClient();
   const caseId = String(formData.get("case_id") ?? "").trim();
   const submissionId = String(formData.get("submission_id") ?? "").trim();
-  const submittedAt = String(formData.get("submitted_at") ?? "").trim();
+  const submitted = readZonedDateTime(formData, "submitted_local");
   const originalDate = String(formData.get("original_date") ?? "").trim();
 
-  if (!caseId || !submissionId || !submittedAt || !originalDate) {
+  if (
+    !caseId ||
+    !submissionId ||
+    submitted.error === "missing" ||
+    !originalDate
+  ) {
     return { error: "Submission and original dates are required.", success: null };
   }
 
-  const parsedSubmittedAt = new Date(submittedAt);
-  if (Number.isNaN(parsedSubmittedAt.getTime())) {
-    return { error: "The submission date is invalid.", success: null };
+  if (submitted.error === "zone") {
+    return { error: "Choose Santiago or Amsterdam time.", success: null };
   }
 
-  const { error } = await supabase
+  if (!submitted.date) {
+    return {
+      error: "The submission time is invalid or does not exist in the chosen time zone.",
+      success: null,
+    };
+  }
+
+  if (!/^d{4}-d{2}-d{2}$/.test(originalDate)) {
+    return { error: "The original date is invalid.", success: null };
+  }
+
+  const { data: updated, error } = await supabase
     .from("submissions")
     .update({
-      submitted_at: parsedSubmittedAt.toISOString(),
+      submitted_at: submitted.date.toISOString(),
       original_date: originalDate,
     })
     .eq("id", submissionId)
-    .eq("case_id", caseId);
+    .eq("case_id", caseId)
+    .select("id");
 
   if (error) {
     console.error(error);
     return { error: "Unable to update the submission dates.", success: null };
+  }
+
+  if (!updated || updated.length === 0) {
+    return {
+      error: "The submission could not be updated in this supervision.",
+      success: null,
+    };
   }
 
   revalidateSupervisionPages(caseId);

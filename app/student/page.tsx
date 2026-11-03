@@ -10,7 +10,10 @@ import PaginatedList from "@/components/shared/paginated-list";
 import SubmissionUploadForm from "@/components/submissions/submission-upload-form";
 
 import { SITE_CONFIG } from "@/lib/config/site";
-import { formatPortalDateTime } from "@/lib/datetime/format";
+import {
+  formatMeetingDateTime,
+  formatPortalDateTime,
+} from "@/lib/datetime/format";
 import {
   sortMeetingsForWorkspace,
   sortMilestonesForWorkspace,
@@ -472,7 +475,7 @@ export default async function StudentPage() {
                     className="border-b border-gray-100 pb-4 last:border-0"
                   >
                     <p className="font-medium text-gray-900">
-                      {formatPortalDateTime(meeting.scheduled_at)}
+                      {formatMeetingDateTime(meeting.scheduled_at)}
                     </p>
                     {meeting.notes && (
                       <p className="mt-2 whitespace-pre-wrap text-sm text-gray-600">
