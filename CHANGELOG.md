@@ -1,24 +1,80 @@
 # CHANGELOG
 
-## v0.1.0-beta.7 — in development
+## v0.1.0-beta.7 "Autumn Forge"
 
-### Status
+### Summary
 
-- Beta.7 development has started and is ongoing.
-- The release date and codename are to be confirmed.
-- Additional beta.7 changes will be added to this section as development continues.
-- Beta.6 remains the current released beta and continues to be shown in the portal footer until beta.7 is released.
+- Updated Next.js from `16.3.6` to `16.4.5` to fix two critical unauthenticated remote code execution advisories, high-severity issues in Image Optimization and Server Actions, and the seven moderate advisories of the November 2026 Next.js security release.
+- Added HTTP security headers, `noindex` on every page and response, and a `robots.txt` that disallows crawling.
+- Restricted every Supabase Auth redirect to the production origin and made Netlify build `main` only.
+- Hardened the invitation and account Edge Functions so cancelling or retrying an invitation can never delete an account that the invitation did not create.
+- Added migration `20261103180000_beta7_security_hardening.sql`, which tightens milestone, function and table privileges and records the production Storage policies in version control.
+- Meeting and submission times are entered in Santiago or Amsterdam time, and meetings are shown in both zones.
+- Fixed the password recovery flow for links that return a `?code=`.
+- Fixed milestone completion dates, dashboard date windows, silently ignored updates, and raw database errors shown to users.
+- Added a GitHub Actions CI workflow and Dependabot.
 
 ### Security and platform
 
-- Updated Next.js from `16.3.6` to `16.4.4` and `eslint-config-next` from `16.3.1` to `16.4.4`, keeping both exactly pinned. This fixes the Next.js advisories that affected `16.3.6`, including two critical unauthenticated remote code execution issues (GHSA-2464-fhr4-w9xw in Image Optimization with SVG files, and GHSA-673q-mjm6-r5xr in `use cache` functions) and high-severity issues in Image Optimization (GHSA-cjq9-62q9-8jv4) and Server Actions (GHSA-p3m5-59mp-jv5r).
+- Updated Next.js from `16.3.6` to `16.4.5` and `eslint-config-next` from `16.3.1` to `16.4.5`, keeping both exactly pinned. `16.4.4` was deployed first as a hotfix (#11). This fixes the Next.js advisories that affected `16.3.6`, including two critical unauthenticated remote code execution issues (GHSA-2464-fhr4-w9xw in Image Optimization with SVG files, and GHSA-673q-mjm6-r5xr in `use cache` functions) and high-severity issues in Image Optimization (GHSA-cjq9-62q9-8jv4) and Server Actions (GHSA-p3m5-59mp-jv5r). `16.4.5` is the November 2026 security release, which fixes seven moderate advisories (GHSA-mfr8-8qww-v76h, GHSA-vc7v-qv4w-wrv8, GHSA-vvgp-ww4w-46vf, GHSA-rhh4-g77r-r9qj, GHSA-pc58-hwjq-p385, GHSA-7qx7-33qx-rqx2 and GHSA-f3mh-rxg3-f5g2).
 - Ran `npm audit fix` to update transitive dependencies within their existing ranges, including `sharp` `0.35.5` and `source-map-js` `1.2.2`, so the production audit reports no high or critical advisories.
 - The remaining low-severity KaTeX advisory (GHSA-238p-pmpm-9mq7) comes from copies nested under `rehype-katex` and `remark-math`; its only automatic fix is a breaking downgrade of `rehype-katex`, so it was left unchanged.
+- Added security headers on every response: `Strict-Transport-Security`, `X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, a restrictive `Permissions-Policy` and `X-Robots-Tag: noindex, nofollow`. `next.config.ts` sends them on rendered pages and `netlify.toml` on static files; `X-Powered-By` is no longer sent.
+- Added `robots: { index: false, follow: false }` to the root metadata and `app/robots.ts`, which disallows all crawling; `/robots.txt` is public in the proxy.
+- Tightened the proxy's public routes to `/login`, `/auth/*`, `/release-notes` and `/robots.txt` exactly, so paths such as `/authors` are no longer treated as public.
+- The submission download redirect now sends `Cache-Control: private, no-store` and `Referrer-Policy: no-referrer`, because its signed URL carries a short-lived token.
+
+### Netlify and Auth redirects
+
+- Added `netlify.toml` with `ignore = "exit 0"` for the `deploy-preview` and `branch-deploy` contexts, so only `main` builds even if branch deploys are turned back on in the Netlify UI. Branch deploys and deploy previews are also disabled there.
+- Removed the `https://**--supervision-portal.netlify.app/**` entry from the Auth redirect allow-list in `supabase/config.toml` and from the hosted project's URL Configuration. A leading `**` matched any host, so a password-reset or invitation link could have been redirected to an arbitrary site.
+- Invitations always redirect to `https://supervision.bgonzalezbustamante.com/auth/confirm`. The Edge Function no longer accepts a redirect origin, and the access actions no longer derive one from request headers.
+- Password recovery requests always redirect to the production `/auth/recovery`.
+
+### Edge Functions
+
+- `invite-supervision-user`: an Auth account that already exists for an invited email is no longer linked to the invitation. Cancel and Retry remove an account only if the invitation created it, it has never signed in, it has no supervision records and it is not the primary supervisor's.
+- `invite-supervision-user`: the Auth account lookup reads every page of users instead of the first 1,000.
+- `delete-supervision-user`: active invitations for the deleted account are matched on the exact email address; `_` and `%` are no longer treated as wildcards. The access page's existing-account check does the same.
+- Error messages returned by both functions now reach the access page instead of being replaced by generic text.
+- Both functions pin `npm:@supabase/supabase-js@2.112.3` and `jsr:@supabase/functions-js@2.112.3`, matching the application's version.
+
+### Database and Storage
+
+- Added migration `20261103180000_beta7_security_hardening.sql`, applied to the production Supabase project after this release was deployed.
+- Students can update only case-level milestones: the policy's `USING` clause now also requires `student_id is null`, so a group member cannot take over a groupmate's personal milestone.
+- Revoked the default `EXECUTE` privilege for `PUBLIC` on new functions globally. The per-schema revoke added in beta.6 had no effect, because PostgreSQL grants `EXECUTE` to `PUBLIC` through a global default. New functions must now grant `EXECUTE` explicitly in their migration.
+- The orphan-file deletion policy checks for a submission with the SECURITY DEFINER helper `private.submission_file_exists(text)`. The previous subquery ran under the caller's RLS, so a file whose row the caller could no longer see looked orphaned.
+- Revoked all table and sequence privileges from `anon` in the `public` schema, and `TRUNCATE`, `TRIGGER`, `REFERENCES` and `MAINTAIN` from `authenticated`, for existing and future tables. The portal never reads tables as `anon`, and these privileges are not governed by RLS.
+- Recorded the five production Storage `SELECT` and `INSERT` policies on `storage.objects`, which had been created in the dashboard, unchanged in the migration, so a fresh project reproduces production. There is still no `UPDATE` policy, so stored files cannot be overwritten.
+- The `submissions` bucket is defined in the migration (private, 25 MiB) and accepts only `application/pdf`, `application/msword` and `application/vnd.openxmlformats-officedocument.wordprocessingml.document`. The upload form now sends the content type of the checked file extension instead of the type reported by the browser.
+
+### Meetings and dates
+
+- Meeting and submission date-time fields have a Santiago/Amsterdam time zone selector, preset from the browser's zone, with a live preview in both zones. The server converts the wall-clock time with the chosen zone, so the stored time no longer depends on the browser's zone; times that do not exist because of a clock change are rejected.
+- Meetings are shown in both zones on the supervision workspace and the student page, for example `04 Nov 2026, 11:00 Santiago (GMT-3) · 15:00 Amsterdam (GMT+1)`.
+- Milestone `completed_at` is the Santiago date on which the milestone became completed (it was the UTC date) and is kept when a completed milestone is edited later.
+- The admin dashboard's upcoming window uses Santiago dates, matching the supervision workspaces.
+
+### Accounts and recovery
+
+- The recovery page uses the session the browser client has already established from a `?code=` link instead of exchanging the code a second time, which failed.
+- Recovery link errors and Supabase Auth password errors are shown as fixed messages; text from the URL is no longer displayed.
+
+### Supervision workspace
+
+- Updates and deletes of feedback, milestones, meetings and submission dates that RLS does not allow now report an error instead of a success message.
+- A submission's file is removed only after its database row has been deleted.
+- Database errors from supervision configuration and submission uploads are mapped to fixed messages; messages raised by `admin_configure_supervision_case` itself are still shown to the supervisor.
 
 ### Development
 
 - Added a GitHub Actions CI workflow (`.github/workflows/ci.yml`) that runs on pull requests and pushes to `main`: `npm ci`, `npm audit --omit=dev --audit-level=high`, lint, and the production build, with no environment variables.
 - Added Dependabot (`.github/dependabot.yml`): weekly grouped minor and patch npm updates, grouped security updates, and monthly GitHub Actions updates. Major upgrades are not raised automatically.
+- Pinned the Supabase CLI to `2.115.0`.
+- Removed unused legacy server actions under `app/admin/students/[studentId]/`.
+- Replaced the deprecated `priority` property of `next/image` with `preload`.
+- `lib/releases.ts` types `status` as `"Current beta" | "In development"`; the footer falls back to the newest released entry and omits the codename quotes when there is no codename.
 
 ---
 
