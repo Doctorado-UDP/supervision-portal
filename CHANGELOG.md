@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## v0.1.0-beta.7 — in development
+
+### Status
+
+- Beta.7 development has started and is ongoing.
+- The release date and codename are to be confirmed.
+- Additional beta.7 changes will be added to this section as development continues.
+- Beta.6 remains the current released beta and continues to be shown in the portal footer until beta.7 is released.
+
+### Security and platform
+
+- Updated Next.js from `16.3.6` to `16.4.4` and `eslint-config-next` from `16.3.1` to `16.4.4`, keeping both exactly pinned. This fixes the Next.js advisories that affected `16.3.6`, including two critical unauthenticated remote code execution issues (GHSA-2464-fhr4-w9xw in Image Optimization with SVG files, and GHSA-673q-mjm6-r5xr in `use cache` functions) and high-severity issues in Image Optimization (GHSA-cjq9-62q9-8jv4) and Server Actions (GHSA-p3m5-59mp-jv5r).
+- Ran `npm audit fix` to update transitive dependencies within their existing ranges, including `sharp` `0.35.5` and `source-map-js` `1.2.2`, so the production audit reports no high or critical advisories.
+- The remaining low-severity KaTeX advisory (GHSA-238p-pmpm-9mq7) comes from copies nested under `rehype-katex` and `remark-math`; its only automatic fix is a breaking downgrade of `rehype-katex`, so it was left unchanged.
+
+### Development
+
+- Added a GitHub Actions CI workflow (`.github/workflows/ci.yml`) that runs on pull requests and pushes to `main`: `npm ci`, `npm audit --omit=dev --audit-level=high`, lint, and the production build, with no environment variables.
+- Added Dependabot (`.github/dependabot.yml`): weekly grouped minor and patch npm updates, grouped security updates, and monthly GitHub Actions updates. Major upgrades are not raised automatically.
+
+---
+
 ## v0.1.0-beta.6 "Rustic Peak"
 
 ### Summary

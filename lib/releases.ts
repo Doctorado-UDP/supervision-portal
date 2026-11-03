@@ -15,6 +15,22 @@ export type ReleaseNote = {
 
 export const releases: ReleaseNote[] = [
   {
+    version: "v0.1.0-beta.7",
+    status: "In development",
+    comparison: "Ongoing development since beta.6",
+    summary:
+      "Beta.7 development has started. This release is still in progress, with further changes planned and its release date and codename to be confirmed.",
+    sections: [
+      {
+        title: "Security and platform",
+        items: [
+          "Updated Next.js to 16.4.4 to incorporate upstream security fixes while keeping the framework version pinned.",
+          "Updated supporting packages so the portal's production dependencies report no high or critical security advisories.",
+        ],
+      },
+    ],
+  },
+  {
     version: "v0.1.0-beta.6",
     codename: "Rustic Peak",
     status: "Current beta",
