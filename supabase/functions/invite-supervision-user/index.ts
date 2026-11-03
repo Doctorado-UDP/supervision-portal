@@ -1,5 +1,5 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js@2.112.3/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.112.3";
 
 const PRIMARY_SUPERVISOR_EMAIL = "bastian.gonzalez.b@mail.udp.cl";
 const SITE_URL = "https://supervision.bgonzalezbustamante.com";
@@ -11,38 +11,12 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
-function getAllowedRedirectOrigin(value?: string) {
-  if (!value) return SITE_URL;
+// Invitation links always return to production. Netlify branch deploys and
+// deploy previews are disabled, and Supabase Auth allows no other origin.
+const INVITATION_REDIRECT_URL = `${SITE_URL}/auth/confirm`;
 
-  let url: URL;
-
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error("The invitation redirect origin is invalid.");
-  }
-
-  const hostname = url.hostname.toLowerCase();
-  const isProduction =
-    url.origin.toLowerCase() === SITE_URL.toLowerCase();
-  const isNetlifyPreview =
-    url.protocol === "https:" &&
-    hostname.endsWith("--supervision-portal.netlify.app");
-
-  if (
-    url.protocol !== "https:" ||
-    url.username ||
-    url.password ||
-    url.pathname !== "/" ||
-    url.search ||
-    url.hash ||
-    (!isProduction && !isNetlifyPreview)
-  ) {
-    throw new Error("The invitation redirect origin is not allowed.");
-  }
-
-  return url.origin;
-}
+// listUsers page size; findAuthUserByEmail reads every page.
+const AUTH_USERS_PAGE_SIZE = 1000;
 
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") {
@@ -89,10 +63,10 @@ Deno.serve(async (request: Request) => {
     );
   }
 
+  // Older app versions also send redirect_origin; it is ignored.
   let payload: {
     invitation_id?: string;
     action?: string;
-    redirect_origin?: string;
   };
 
   try {
@@ -111,23 +85,6 @@ Deno.serve(async (request: Request) => {
 
   if (!invitationId) {
     return jsonResponse({ ok: false, error: "Invitation ID is required." }, 400);
-  }
-
-  let redirectOrigin: string;
-
-  try {
-    redirectOrigin = getAllowedRedirectOrigin(payload.redirect_origin?.trim());
-  } catch (error) {
-    return jsonResponse(
-      {
-        ok: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "The invitation redirect origin is invalid.",
-      },
-      400
-    );
   }
 
   const { data: invitation, error: invitationError } = await admin
@@ -205,7 +162,28 @@ Deno.serve(async (request: Request) => {
     return checks.some((result) => (result.count ?? 0) > 0);
   }
 
+  // Removes an account created by an invitation that was never used. It
+  // refuses the primary supervisor, any account that has ever signed in and
+  // any account with supervision records, so Cancel or Retry can never delete
+  // a real account.
   async function removeUnusedAuthUser(authUserId: string) {
+    const { data: target, error: targetError } =
+      await admin.auth.admin.getUserById(authUserId);
+
+    if (targetError || !target?.user) {
+      throw new Error("The onboarding account could not be checked.");
+    }
+
+    if (
+      target.user.email?.trim().toLowerCase() ===
+        PRIMARY_SUPERVISOR_EMAIL.toLowerCase() ||
+      target.user.last_sign_in_at
+    ) {
+      throw new Error(
+        "This account is already in use and cannot be removed as a pending invitation."
+      );
+    }
+
     if (await accountHasLinkedRecords(authUserId)) {
       throw new Error(
         "This account already has supervision activity or assignments and cannot be removed as a pending invitation."
@@ -221,20 +199,29 @@ Deno.serve(async (request: Request) => {
 
   async function findAuthUserByEmail(email: string) {
     const normalizedEmail = email.trim().toLowerCase();
-    const { data, error } = await admin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    });
 
-    if (error) {
-      throw new Error("Unable to check existing Auth accounts.");
-    }
+    for (let page = 1; ; page += 1) {
+      const { data, error } = await admin.auth.admin.listUsers({
+        page,
+        perPage: AUTH_USERS_PAGE_SIZE,
+      });
 
-    return (
-      data.users.find(
+      if (error) {
+        throw new Error("Unable to check existing Auth accounts.");
+      }
+
+      const match = data.users.find(
         (candidate) => candidate.email?.trim().toLowerCase() === normalizedEmail
-      ) ?? null
-    );
+      );
+
+      if (match) {
+        return match;
+      }
+
+      if (data.users.length < AUTH_USERS_PAGE_SIZE) {
+        return null;
+      }
+    }
   }
 
   if (action === "cancel") {
@@ -323,11 +310,13 @@ Deno.serve(async (request: Request) => {
     const message =
       "An Auth account already exists for this email address. Resolve that account before retrying the invitation.";
 
+    // The existing account is not linked to the invitation: Cancel and Retry
+    // only ever remove accounts that this function created.
     await admin
       .from("access_invitations")
       .update({
         status: "failed",
-        auth_user_id: existingAuthUser.id,
+        auth_user_id: null,
         last_error: message,
         updated_at: new Date().toISOString(),
       })
@@ -339,10 +328,12 @@ Deno.serve(async (request: Request) => {
   const { data: inviteData, error: inviteError } =
     await admin.auth.admin.inviteUserByEmail(invitation.email, {
       data: { full_name: invitation.full_name },
-      redirectTo: `${redirectOrigin}/auth/confirm`,
+      redirectTo: INVITATION_REDIRECT_URL,
     });
 
   if (inviteError || !inviteData.user) {
+    // Only the global supervisor reaches this function, so Auth's own message
+    // (for example an email rate limit) is shown to help resolve it.
     const message = inviteError?.message ?? "Invitation email could not be sent.";
     let strandedAuthUserId: string | null = null;
 

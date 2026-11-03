@@ -1,5 +1,5 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js@2.112.3/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.112.3";
 
 const PRIMARY_SUPERVISOR_EMAIL = "bastian.gonzalez.b@mail.udp.cl";
 
@@ -285,7 +285,11 @@ Deno.serve(async (request: Request) => {
         last_error: null,
         updated_at: new Date().toISOString(),
       })
-      .ilike("email", targetEmail)
+      // Exact, case-insensitive match: LIKE wildcards in the address are escaped.
+      .ilike(
+        "email",
+        String(targetEmail).replace(/[\\%_]/g, (character: string) => `\\${character}`)
+      )
       .in("status", ["pending", "sent", "failed"]);
   }
 
