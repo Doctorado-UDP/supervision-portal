@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import SiteFooter from "@/components/shared/site-footer";
+import { describePasswordError } from "@/lib/auth/password-errors";
 import { createClient } from "@/lib/supabase/client";
 
 type RecoveryState = "verifying" | "ready" | "saving" | "failed";
@@ -29,11 +30,13 @@ export default function PasswordRecoveryPage() {
       const errorDescription =
         hash.get("error_description") ?? url.searchParams.get("error_description");
 
+      // A fixed message: text from the URL is never shown on the page.
       if (errorDescription) {
+        console.error("Password recovery link error:", errorDescription);
         if (!cancelled) {
           setState("failed");
           setMessage(
-            decodeURIComponent(errorDescription.replace(/\+/g, " "))
+            "The password recovery link is invalid or has expired. Request a new recovery email and use the newest link."
           );
         }
         return;
@@ -97,6 +100,23 @@ export default function PasswordRecoveryPage() {
       const code = url.searchParams.get("code");
 
       if (code) {
+        // The browser client exchanges ?code= by itself when it initialises
+        // (detectSessionInUrl) and then discards the PKCE verifier, so a
+        // second exchange would fail. Use that session if it already exists.
+        const {
+          data: { session: existingSession },
+        } = await supabase.auth.getSession();
+
+        if (existingSession) {
+          window.history.replaceState({}, "", "/auth/recovery");
+
+          if (!cancelled) {
+            setState("ready");
+            setMessage("");
+          }
+          return;
+        }
+
         const { error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (error) {
@@ -165,7 +185,7 @@ export default function PasswordRecoveryPage() {
     if (error) {
       console.error("Password recovery update failed:", error);
       setState("ready");
-      setMessage(error.message || "Your password could not be updated.");
+      setMessage(describePasswordError(error));
       return;
     }
 
@@ -192,7 +212,7 @@ export default function PasswordRecoveryPage() {
                 alt="Universidad Diego Portales"
                 width={220}
                 height={54}
-                priority
+                preload
                 className="h-auto w-auto max-w-full"
               />
             </div>

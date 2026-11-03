@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { describePasswordError } from "@/lib/auth/password-errors";
 import { createClient } from "@/lib/supabase/client";
 
 export default function PasswordForm() {
@@ -31,7 +32,8 @@ export default function PasswordForm() {
     const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
-      setErrorMessage(error.message);
+      console.error("Onboarding password update failed:", error);
+      setErrorMessage(describePasswordError(error));
       setIsLoading(false);
       return;
     }

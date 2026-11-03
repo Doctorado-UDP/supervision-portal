@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 import SiteFooter from "@/components/shared/site-footer";
+import { SITE_CONFIG } from "@/lib/config/site";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
@@ -27,7 +28,8 @@ export default function ForgotPasswordPage() {
     setError(null);
 
     const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/recovery`;
+    // Always the production origin: Supabase Auth only allows redirects there.
+    const redirectTo = `${SITE_CONFIG.siteUrl}/auth/recovery`;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       normalizedEmail,
       { redirectTo }
@@ -57,7 +59,7 @@ export default function ForgotPasswordPage() {
                 alt="Universidad Diego Portales"
                 width={220}
                 height={54}
-                priority
+                preload
                 className="h-auto w-auto max-w-full"
               />
             </div>
