@@ -15,7 +15,7 @@ export default function StudentHeader({ fullName }: StudentHeaderProps) {
             alt="Universidad Diego Portales"
             width={164}
             height={40}
-            priority
+            preload
             className="h-auto w-auto max-w-[164px]"
           />
 

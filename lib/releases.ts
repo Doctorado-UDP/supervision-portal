@@ -3,10 +3,13 @@ export type ReleaseNoteSection = {
   items: string[];
 };
 
+// Exactly one entry is the "Current beta"; it is shown in the site footer.
+export type ReleaseStatus = "Current beta" | "In development";
+
 export type ReleaseNote = {
   version: string;
   codename?: string;
-  status?: string;
+  status?: ReleaseStatus;
   releaseDate?: string;
   comparison: string;
   summary: string;
@@ -237,5 +240,8 @@ export const releases: ReleaseNote[] = [
   },
 ];
 
+// Falls back to the newest released entry, never one still in development.
 export const currentRelease =
-  releases.find((release) => release.status === "Current beta") ?? releases[0];
+  releases.find((release) => release.status === "Current beta") ??
+  releases.find((release) => release.releaseDate) ??
+  releases[0];

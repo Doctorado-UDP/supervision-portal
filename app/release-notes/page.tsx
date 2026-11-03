@@ -26,7 +26,7 @@ export default function ReleaseNotesPage() {
               alt="Universidad Diego Portales"
               width={164}
               height={40}
-              priority
+              preload
               className="h-auto w-auto max-w-[164px]"
             />
             <span className="border-l border-gray-200 pl-4 text-sm font-semibold text-gray-800">
