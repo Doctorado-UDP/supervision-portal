@@ -1,11 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { requireGlobalSupervisor } from "@/lib/auth/require-admin";
-import { SITE_CONFIG } from "@/lib/config/site";
 import { createClient } from "@/lib/supabase/server";
 
 function getText(formData: FormData, name: string) {
@@ -17,18 +15,26 @@ function redirectAccess(kind: "notice" | "error", message: string): never {
   redirect(`/admin/access?${kind}=${encodeURIComponent(message)}`);
 }
 
-async function getRequestOrigin() {
-  const requestHeaders = await headers();
-  const forwardedHost = requestHeaders.get("x-forwarded-host");
-  const host = forwardedHost ?? requestHeaders.get("host");
-  const forwardedProto = requestHeaders.get("x-forwarded-proto");
-  const protocol = forwardedProto ?? "https";
+// Escapes LIKE wildcards so an email address matches only itself.
+function escapeLikePattern(value: string) {
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
 
-  if (!host) {
-    return SITE_CONFIG.siteUrl;
+// supabase.functions.invoke returns data: null for non-2xx responses; the
+// Edge Function's own message is in the error's response body.
+async function readFunctionError(error: unknown): Promise<string | null> {
+  const context = (error as { context?: unknown } | null)?.context;
+
+  if (!(context instanceof Response)) {
+    return null;
   }
 
-  return `${protocol}://${host}`;
+  try {
+    const body = await context.json();
+    return typeof body?.error === "string" ? body.error : null;
+  } catch {
+    return null;
+  }
 }
 
 async function invokeInvitationAction(
@@ -36,26 +42,23 @@ async function invokeInvitationAction(
   action: "send" | "retry" | "cancel"
 ) {
   const supabase = await createClient();
-  const redirectOrigin = await getRequestOrigin();
   const { data, error } = await supabase.functions.invoke(
     "invite-supervision-user",
     {
       body: {
         invitation_id: invitationId,
         action,
-        redirect_origin: redirectOrigin,
       },
     }
   );
 
   if (error) {
-    console.error(`Invitation ${action} failed:`, error, data);
+    console.error(`Invitation ${action} failed:`, error);
     return {
       ok: false,
       message:
-        typeof data?.error === "string"
-          ? data.error
-          : `The invitation could not be ${action === "cancel" ? "cancelled" : "sent"}.`,
+        (await readFunctionError(error)) ??
+        `The invitation could not be ${action === "cancel" ? "cancelled" : "sent"}.`,
     };
   }
 
@@ -86,13 +89,11 @@ async function invokeAccountDeletion(userId: string) {
   );
 
   if (error) {
-    console.error("Account deletion failed:", error, data);
+    console.error("Account deletion failed:", error);
     return {
       ok: false,
       message:
-        typeof data?.error === "string"
-          ? data.error
-          : "The account could not be deleted.",
+        (await readFunctionError(error)) ?? "The account could not be deleted.",
     };
   }
 
@@ -135,7 +136,7 @@ export async function createAccessInvitation(formData: FormData) {
   const { data: existingProfile, error: profileError } = await supabase
     .from("profiles")
     .select("id")
-    .ilike("email", email)
+    .ilike("email", escapeLikePattern(email))
     .maybeSingle();
 
   if (profileError) {

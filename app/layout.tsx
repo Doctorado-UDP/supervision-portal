@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   title: "Supervision Portal | Dr. Bastián González-Bustamante",
   description:
     "Graduate supervision portal for students and supervisory staff.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

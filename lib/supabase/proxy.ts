@@ -42,10 +42,12 @@ export async function updateSession(request: NextRequest) {
   const user = data?.claims;
 
   // Routes that must remain accessible without being logged in.
+  const pathname = request.nextUrl.pathname;
   const isPublicRoute =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/auth") ||
-    request.nextUrl.pathname.startsWith("/release-notes");
+    pathname === "/login" ||
+    pathname.startsWith("/auth/") ||
+    pathname === "/release-notes" ||
+    pathname === "/robots.txt";
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { getPortalDateKey } from "@/lib/datetime/format";
 import { createClient } from "@/lib/supabase/server";
 
 const STORAGE_LIMIT_BYTES =
@@ -49,26 +50,23 @@ export default async function AdminDashboardPage() {
   // DATE WINDOW
   // ============================================================
 
+  // Calendar dates in the portal's zone (Santiago), as in the workspaces.
   const today =
     new Date();
 
   const thirtyDaysFromNow =
-    new Date(today);
-
-  thirtyDaysFromNow.setDate(
-    thirtyDaysFromNow.getDate() +
-      30
-  );
+    new Date(
+      today.getTime() +
+        30 * 24 * 60 * 60 * 1000
+    );
 
   const todayString =
-    today
-      .toISOString()
-      .slice(0, 10);
+    getPortalDateKey(today);
 
   const thirtyDaysString =
-    thirtyDaysFromNow
-      .toISOString()
-      .slice(0, 10);
+    getPortalDateKey(
+      thirtyDaysFromNow
+    );
 
   // ============================================================
   // DASHBOARD DATA

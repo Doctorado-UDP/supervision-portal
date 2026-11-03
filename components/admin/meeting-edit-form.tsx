@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId } from "react";
 
 import {
   updateMeeting,
   type PlanningActionState,
 } from "@/app/admin/supervisions/[caseId]/actions";
+import ZonedDateTimeField from "@/components/shared/zoned-date-time-field";
 
 type MeetingEditFormProps = {
   caseId: string;
@@ -21,29 +22,15 @@ const initialState: PlanningActionState = {
   success: null,
 };
 
-function toLocalDateTimeInput(value: string) {
-  const date = new Date(value);
-  const offset = date.getTimezoneOffset();
-  const local = new Date(date.getTime() - offset * 60 * 1000);
-  return local.toISOString().slice(0, 16);
-}
-
 export default function MeetingEditForm({
   caseId,
   meeting,
 }: MeetingEditFormProps) {
-  const [localDateTime, setLocalDateTime] = useState(
-    toLocalDateTimeInput(meeting.scheduled_at)
-  );
-
+  const notesId = useId();
   const [state, formAction, isPending] = useActionState(
     updateMeeting,
     initialState
   );
-
-  const isoDateTime = localDateTime
-    ? new Date(localDateTime).toISOString()
-    : "";
 
   return (
     <details className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3">
@@ -54,26 +41,23 @@ export default function MeetingEditForm({
       <form action={formAction} className="mt-4 space-y-3">
         <input type="hidden" name="case_id" value={caseId} />
         <input type="hidden" name="meeting_id" value={meeting.id} />
-        <input type="hidden" name="scheduled_at" value={isoDateTime} />
+
+        <ZonedDateTimeField
+          name="scheduled_local"
+          label="Date and time"
+          initialValue={meeting.scheduled_at}
+          compact
+        />
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-700">
-            Date and time
-          </label>
-          <input
-            type="datetime-local"
-            required
-            value={localDateTime}
-            onChange={(event) => setLocalDateTime(event.target.value)}
-            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-700">
+          <label
+            htmlFor={notesId}
+            className="mb-1 block text-xs font-medium text-gray-700"
+          >
             Notes
           </label>
           <textarea
+            id={notesId}
             name="notes"
             rows={3}
             defaultValue={meeting.notes ?? ""}
@@ -95,7 +79,7 @@ export default function MeetingEditForm({
 
         <button
           type="submit"
-          disabled={isPending || !localDateTime}
+          disabled={isPending}
           className="rounded-md bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700 disabled:opacity-50"
         >
           {isPending ? "Saving..." : "Save changes"}

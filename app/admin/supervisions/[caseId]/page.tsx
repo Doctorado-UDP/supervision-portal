@@ -13,7 +13,7 @@ import {
   requireAdmin,
 } from "@/lib/auth/require-admin";
 import { SITE_CONFIG } from "@/lib/config/site";
-import { formatPortalDateTime } from "@/lib/datetime/format";
+import { formatMeetingDateTime } from "@/lib/datetime/format";
 import {
   sortMeetingsForWorkspace,
   sortMilestonesForWorkspace,
@@ -404,7 +404,7 @@ export default async function SupervisionPage({ params }: SupervisionPageProps) 
                 {meetings.map((meeting) => (
                   <div key={meeting.id} className="py-5">
                     <p className="font-medium text-gray-900">
-                      {formatPortalDateTime(meeting.scheduled_at)}
+                      {formatMeetingDateTime(meeting.scheduled_at)}
                     </p>
                     {meeting.notes && (
                       <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-600">

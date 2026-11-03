@@ -191,10 +191,15 @@ export async function configureSupervision(
       configureError
     );
 
+    // P0001 is a RAISE EXCEPTION from admin_configure_supervision_case, whose
+    // messages are written for the supervisor; other database errors are not
+    // shown.
     return {
       error:
-        configureError.message ||
-        "Unable to configure supervision.",
+        configureError.code === "P0001" &&
+        configureError.message
+          ? configureError.message
+          : "Unable to configure supervision.",
     };
   }
 

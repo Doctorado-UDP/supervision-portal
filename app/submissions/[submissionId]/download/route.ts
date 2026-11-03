@@ -102,7 +102,19 @@ export async function GET(
     );
   }
 
-  return NextResponse.redirect(
+  // The signed URL carries a short-lived token: never cache the redirect or
+  // send this page's URL onwards as a referrer.
+  const response = NextResponse.redirect(
     data.signedUrl
   );
+  response.headers.set(
+    "Cache-Control",
+    "private, no-store"
+  );
+  response.headers.set(
+    "Referrer-Policy",
+    "no-referrer"
+  );
+
+  return response;
 }

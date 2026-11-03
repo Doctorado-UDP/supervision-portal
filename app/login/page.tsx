@@ -24,7 +24,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 alt="Universidad Diego Portales"
                 width={267}
                 height={65}
-                priority
+                preload
                 className="h-auto w-auto max-w-full"
               />
             </div>

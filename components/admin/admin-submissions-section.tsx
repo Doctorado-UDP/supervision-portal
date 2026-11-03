@@ -12,6 +12,7 @@ import SubmissionUploadForm from "@/components/submissions/submission-upload-for
 import {
   isGlobalSupervisor,
   requireAdmin,
+  SUPERVISOR_EMAIL,
 } from "@/lib/auth/require-admin";
 import { formatPortalDateTime } from "@/lib/datetime/format";
 import { createClient } from "@/lib/supabase/server";
@@ -19,8 +20,6 @@ import { createClient } from "@/lib/supabase/server";
 type AdminSubmissionsSectionProps = {
   caseId: string;
 };
-
-const SUPERVISOR_EMAIL = "bastian.gonzalez.b@mail.udp.cl";
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;

@@ -67,7 +67,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
               alt="Universidad Diego Portales"
               width={164}
               height={40}
-              priority
+              preload
               className="h-auto w-auto max-w-[164px]"
             />
             <span className="hidden border-l border-gray-200 pl-4 text-sm font-semibold text-gray-800 sm:block">

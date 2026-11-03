@@ -1,0 +1,25 @@
+# Netlify settings kept in the repository. The build command and publish
+# directory stay in the Netlify UI; this file has no [build] section.
+
+# Only production (main) deploys. Branch deploys and deploy previews are also
+# disabled in the Netlify UI; these contexts skip the build if they are ever
+# turned back on.
+[context.deploy-preview]
+  ignore = "exit 0"
+
+[context.branch-deploy]
+  ignore = "exit 0"
+
+# Security headers for static files served by the Netlify CDN. next.config.ts
+# sends the same list on rendered pages and Route Handlers; keep both in sync.
+[[headers]]
+  for = "/*"
+
+  [headers.values]
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains"
+    X-Frame-Options = "DENY"
+    Content-Security-Policy = "frame-ancestors 'none'"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    X-Robots-Tag = "noindex, nofollow"

@@ -32,14 +32,16 @@ export async function deleteSubmission(formData: FormData) {
     return;
   }
 
-  const { error: deleteError } = await supabase
+  const { data: deleted, error: deleteError } = await supabase
     .from("submissions")
     .delete()
     .eq("id", submissionId)
-    .eq("case_id", caseId);
+    .eq("case_id", caseId)
+    .select("id");
 
-  if (deleteError) {
-    console.error(deleteError);
+  // Remove the file only once its row is really gone.
+  if (deleteError || !deleted || deleted.length === 0) {
+    console.error(deleteError ?? "Submission deletion matched no row.");
     return;
   }
 
