@@ -24,7 +24,7 @@ export const releases: ReleaseNote[] = [
       {
         title: "Security and platform",
         items: [
-          "Updated Next.js to 16.4.2 to incorporate upstream security fixes while keeping the framework version pinned.",
+          "Updated Next.js to 16.4.4 to incorporate upstream security fixes while keeping the framework version pinned.",
           "Updated supporting packages so the portal's production dependencies report no high or critical security advisories.",
         ],
       },
