@@ -28,6 +28,17 @@ const ALLOWED_EXTENSIONS =
     "docx",
   ]);
 
+// Must match allowed_mime_types on the submissions bucket.
+const CONTENT_TYPES: Record<
+  string,
+  string
+> = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx:
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
+
 function getExtension(
   fileName: string
 ) {
@@ -259,7 +270,14 @@ export default function SubmissionUploadForm({
           )
           .upload(
             filePath,
-            file,
+            // storage-js sends a Blob's own type, so the file is re-wrapped
+            // with the type of its checked extension: browsers may report
+            // none for Word files.
+            new Blob([file], {
+              type: CONTENT_TYPES[
+                extension
+              ],
+            }),
             {
               cacheControl:
                 "3600",
@@ -273,8 +291,7 @@ export default function SubmissionUploadForm({
         );
 
         throw new Error(
-          uploadError.message ||
-            "Unable to upload the file."
+          "Unable to upload the file. Please try again."
         );
       }
 
@@ -345,8 +362,9 @@ export default function SubmissionUploadForm({
           ]);
 
         throw new Error(
-          metadataError.message ||
-            "The file was uploaded, but the submission record could not be created."
+          metadataError.code === "23505"
+            ? "Another version of this submission was uploaded at the same time. Please upload it again."
+            : "The submission record could not be created. Please try again."
         );
       }
 

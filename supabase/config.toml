@@ -160,9 +160,10 @@ site_url = "https://supervision.bgonzalezbustamante.com"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
+# Production only: Netlify branch deploys and deploy previews are disabled. Keep the
+# hosted project's Auth URL Configuration identical (it is set in the dashboard).
 additional_redirect_urls = [
-  "https://supervision.bgonzalezbustamante.com/**",
-  "https://**--supervision-portal.netlify.app/**"
+  "https://supervision.bgonzalezbustamante.com/**"
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
@@ -419,3 +420,5 @@ enabled = true
 [storage.buckets.submissions]
 public = false
 file_size_limit = "25MiB"
+# Must match the upload form's CONTENT_TYPES and the beta.7 migration.
+allowed_mime_types = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
