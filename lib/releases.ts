@@ -18,6 +18,27 @@ export type ReleaseNote = {
 
 export const releases: ReleaseNote[] = [
   {
+    version: "v0.1.0-beta.8",
+    status: "In development",
+    comparison: "Ongoing development since beta.7",
+    summary:
+      "Beta.8 development has started. This release is still in progress, with further changes planned and its release date and codename to be confirmed.",
+    sections: [
+      {
+        title: "Feedback",
+        items: [
+          "Fixed the layout of mathematical notation in feedback, such as the size of subscripts and superscripts.",
+        ],
+      },
+      {
+        title: "Security and platform",
+        items: [
+          "Updated the portal's framework and supporting packages to their latest compatible versions.",
+        ],
+      },
+    ],
+  },
+  {
     version: "v0.1.0-beta.7",
     codename: "Autumn Forge",
     status: "Current beta",
