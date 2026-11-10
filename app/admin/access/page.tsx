@@ -270,7 +270,7 @@ export default async function AccessPage({ searchParams }: AccessPageProps) {
 
             <button
               type="submit"
-              className="w-full rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700"
+              className="w-full rounded-md bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-strong"
             >
               Send invitation
             </button>

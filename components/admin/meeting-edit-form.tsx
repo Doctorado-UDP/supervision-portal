@@ -80,7 +80,7 @@ export default function MeetingEditForm({
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-md bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+          className="rounded-md bg-brand px-3 py-2 text-xs font-medium text-white hover:bg-brand-strong disabled:opacity-50"
         >
           {isPending ? "Saving..." : "Save changes"}
         </button>

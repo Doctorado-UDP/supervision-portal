@@ -1,58 +1,95 @@
 @import "tailwindcss";
 
+/*
+ * DESIGN TOKENS
+ * The portal uses the Universidad Diego Portales palette from its logo
+ * (public/branding/udp.png): UDP red #d2232a and charcoal #3f3e3e.
+ * Tier 1 holds the brand primitives; tier 2 maps them into Tailwind's theme,
+ * so components keep using utility classes (bg-brand, text-gray-500...).
+ * Contrast on white is noted for every colour used as text.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* 1. Brand primitives */
+  --brand-udp-red: #d2232a; /* 5.23:1 on white; white text on it 5.23:1 */
+  --brand-udp-red-strong: #a81c22; /* hover, links: 7.36:1 on white */
+  --brand-udp-red-soft: #fbeaea; /* tint: red-strong on it 6.33:1 */
+  --brand-charcoal: #3f3e3e; /* the logo's text */
+}
+
+/*
+ * 2. Theme. The gray scale is replaced by a neutral one at the charcoal's
+ * warm hue (OKLCH hue 50, chroma 0.0045), darker in the mid-tones than
+ * Tailwind's cool default, so surfaces, borders and muted text separate:
+ *   50 paper  #f8f5f3        200 border 1.42:1   400 field border 3.52:1
+ *   500 muted text 6.05:1    700 text 10.44:1    900 ink 16.43:1
+ */
+@theme {
+  --color-gray-50: #f8f5f3;
+  --color-gray-100: #f0ecea;
+  --color-gray-200: #dcd8d6;
+  --color-gray-300: #c0bdbb;
+  --color-gray-400: #8b8887;
+  --color-gray-500: #656261;
+  --color-gray-600: #524f4e;
+  --color-gray-700: #423f3e;
+  --color-gray-800: #302d2c;
+  --color-gray-900: #211f1d;
+  --color-gray-950: #110f0e;
+
+  --color-brand: var(--brand-udp-red);
+  --color-brand-strong: var(--brand-udp-red-strong);
+  --color-brand-soft: var(--brand-udp-red-soft);
+  --color-charcoal: var(--brand-charcoal);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: var(--color-gray-50);
+  color: var(--color-gray-900);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Keyboard focus on links and buttons: the brand red. */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
 }
 
 /* ============================================================
    Supervision Portal: form accessibility / contrast
    ============================================================ */
 
+/* Field borders identify the control, so they need 3:1 (gray-400: 3.52:1). */
 input:not([type="hidden"]),
 select,
 textarea {
-  border-color: #9ca3af;
-  color: #111827;
+  border-color: var(--color-gray-400);
+  color: var(--color-gray-900);
 }
 
 input:not([type="hidden"])::placeholder,
 textarea::placeholder {
-  color: #6b7280;
+  color: var(--color-gray-500);
   opacity: 1;
 }
 
 input:not([type="hidden"]):focus,
 select:focus,
 textarea:focus {
-  border-color: #374151;
+  border-color: var(--color-brand);
   outline: none;
-  box-shadow: 0 0 0 1px #374151;
+  box-shadow: 0 0 0 1px var(--color-brand);
 }
 
 input:disabled,
 select:disabled,
 textarea:disabled {
-  background-color: #f3f4f6;
-  color: #6b7280;
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-500);
 }

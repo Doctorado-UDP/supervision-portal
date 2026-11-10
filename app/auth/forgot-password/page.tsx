@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
                 </p>
                 <Link
                   href="/login"
-                  className="mt-6 inline-flex text-sm font-medium text-gray-700 underline-offset-4 hover:text-gray-950 hover:underline"
+                  className="mt-6 inline-flex text-sm font-medium text-brand-strong underline-offset-4 hover:text-brand hover:underline"
                 >
                   Return to sign in
                 </Link>
@@ -116,7 +116,7 @@ export default function ForgotPasswordPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full rounded-md bg-gray-900 px-4 py-2.5 font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-md bg-brand px-4 py-2.5 font-medium text-white hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {submitting ? "Sending recovery email..." : "Send recovery email"}
                 </button>
@@ -124,7 +124,7 @@ export default function ForgotPasswordPage() {
                 <div className="text-center">
                   <Link
                     href="/login"
-                    className="text-sm font-medium text-gray-600 underline-offset-4 hover:text-gray-950 hover:underline"
+                    className="text-sm font-medium text-brand-strong underline-offset-4 hover:text-brand hover:underline"
                   >
                     Back to sign in
                   </Link>

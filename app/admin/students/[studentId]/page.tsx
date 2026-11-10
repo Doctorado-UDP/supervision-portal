@@ -351,7 +351,7 @@ export default async function StudentPage({
 
           <Link
             href={`/admin/supervisions/${caseId}`}
-            className="h-fit rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+            className="h-fit rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-strong"
           >
             Open supervision
           </Link>

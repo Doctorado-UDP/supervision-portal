@@ -74,7 +74,7 @@ export default async function StudentsPage() {
         {canManageStudents && (
           <Link
             href="/admin/access#invite-user"
-            className="inline-flex justify-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+            className="inline-flex justify-center rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-strong"
           >
             Invite student
           </Link>
@@ -96,7 +96,7 @@ export default async function StudentsPage() {
           {canManageStudents && (
             <Link
               href="/admin/access#invite-user"
-              className="mt-5 inline-flex rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+              className="mt-5 inline-flex rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-strong"
             >
               Invite student
             </Link>

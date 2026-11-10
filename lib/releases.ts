@@ -19,11 +19,20 @@ export type ReleaseNote = {
 export const releases: ReleaseNote[] = [
   {
     version: "v0.1.0-beta.8",
+    codename: "Crimson Summit",
     status: "In development",
     comparison: "Ongoing development since beta.7",
     summary:
-      "Beta.8 development has started. This release is still in progress, with further changes planned and its release date and codename to be confirmed.",
+      "Crimson Summit gives the portal a clearer, higher-contrast look in the University's colours. This release is still in progress, with further changes planned and its release date to be confirmed.",
     sections: [
+      {
+        title: "Visual design",
+        items: [
+          "The portal now uses the Universidad Diego Portales colours, with red main buttons and a red bar along the top of the page header.",
+          "Text, borders and form fields are darker and easier to read, and pages have a warm paper background behind white panels.",
+          "Text now uses the portal's intended typeface.",
+        ],
+      },
       {
         title: "Feedback",
         items: [

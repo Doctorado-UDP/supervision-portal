@@ -232,13 +232,13 @@ export default function PasswordRecoveryPage() {
                 <div className="mt-6 flex flex-wrap gap-4">
                   <Link
                     href="/auth/forgot-password"
-                    className="text-sm font-medium text-gray-700 underline-offset-4 hover:text-gray-950 hover:underline"
+                    className="text-sm font-medium text-brand-strong underline-offset-4 hover:text-brand hover:underline"
                   >
                     Request a new recovery email
                   </Link>
                   <Link
                     href="/login"
-                    className="text-sm font-medium text-gray-500 underline-offset-4 hover:text-gray-900 hover:underline"
+                    className="text-sm font-medium text-brand-strong underline-offset-4 hover:text-brand hover:underline"
                   >
                     Return to sign in
                   </Link>
@@ -300,7 +300,7 @@ export default function PasswordRecoveryPage() {
                 <button
                   type="submit"
                   disabled={state === "saving"}
-                  className="w-full rounded-md bg-gray-900 px-4 py-2.5 font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-md bg-brand px-4 py-2.5 font-medium text-white hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {state === "saving" ? "Updating password..." : "Update password"}
                 </button>

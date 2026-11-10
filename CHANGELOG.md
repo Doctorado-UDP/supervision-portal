@@ -1,13 +1,28 @@
 # CHANGELOG
 
-## v0.1.0-beta.8 — in development
+## v0.1.0-beta.8 "Crimson Summit" — in development
 
 ### Status
 
-- Beta.8 development has started and is ongoing.
-- The release date and codename are to be confirmed.
+- Beta.8 "Crimson Summit" development is ongoing.
+- The release date is to be confirmed.
 - Additional beta.8 changes will be added to this section as development continues.
 - Beta.7 remains the current released beta and continues to be shown in the portal footer until beta.8 is released.
+
+### Visual design
+
+- Adopted the Universidad Diego Portales palette from the logo in `public/branding/udp.png`: UDP red `#d2232a` and charcoal `#3f3e3e`. The portal previously used Tailwind's default cool gray scale and had no brand colour.
+- `app/globals.css` now defines the palette as tokens. Brand primitives (`--brand-udp-red`, `--brand-udp-red-strong` `#a81c22`, `--brand-udp-red-soft` `#fbeaea`, `--brand-charcoal`) are mapped into Tailwind's theme as `brand`, `brand-strong`, `brand-soft` and `charcoal`.
+- Replaced Tailwind's `gray` scale with a neutral scale at the charcoal's warm hue (OKLCH hue 50, chroma 0.0045). Its mid-tones are darker, so every existing `gray-*` class gains contrast without per-component changes:
+  - borders (`gray-200`) 1.42:1, up from 1.24:1;
+  - muted text (`gray-500`) 6.05:1, up from 4.83:1;
+  - body text (`gray-700`) 10.44:1;
+  - ink (`gray-900`) 16.43:1 on white.
+- Form field borders use `gray-400` (3.52:1, up from 2.54:1) to meet WCAG 1.4.11's 3:1 for user-interface components; focused fields and keyboard focus on links and buttons use the brand red.
+- The page background is the warm paper tone `gray-50` (`#f8f5f3`) behind white cards.
+- Primary buttons are UDP red with white text (5.23:1) and darken to `#a81c22` on hover (7.36:1). Page headers (admin, student, account and release notes) carry a 3 px UDP-red bar along the top. The active navigation item is red text on the red tint (6.33:1), and text links use `#a81c22`. The dashboard progress bar, code blocks and status messages keep their colours.
+- Body text uses the Geist font that `app/layout.tsx` already loaded; `body` had overridden it with Arial.
+- Removed the `prefers-color-scheme: dark` block, which switched the body to near-black with light text while components kept light backgrounds. The portal has a single light theme.
 
 ### Feedback rendering
 

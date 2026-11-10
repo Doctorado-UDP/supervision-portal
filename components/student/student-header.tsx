@@ -7,7 +7,7 @@ type StudentHeaderProps = {
 
 export default function StudentHeader({ fullName }: StudentHeaderProps) {
   return (
-    <header className="border-b border-gray-200 bg-white">
+    <header className="border-t-[3px] border-b border-t-brand border-b-gray-200 bg-white">
       <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-6 px-6">
         <div className="flex items-center gap-4">
           <Image

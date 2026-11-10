@@ -74,7 +74,7 @@ export default function LoginForm({ message }: LoginFormProps) {
           </label>
           <Link
             href="/auth/forgot-password"
-            className="text-xs font-medium text-gray-600 underline-offset-4 hover:text-gray-950 hover:underline"
+            className="text-xs font-medium text-brand-strong underline-offset-4 hover:text-brand hover:underline"
           >
             Forgot password?
           </Link>
@@ -103,7 +103,7 @@ export default function LoginForm({ message }: LoginFormProps) {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full rounded-md bg-gray-900 px-4 py-2.5 font-medium text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-md bg-brand px-4 py-2.5 font-medium text-white transition hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isLoading ? "Signing in..." : "Sign in"}
       </button>
