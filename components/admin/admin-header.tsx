@@ -34,7 +34,7 @@ export default function AdminHeader({
   ];
 
   return (
-    <header className="border-b border-gray-200 bg-white">
+    <header className="border-t-[3px] border-b border-t-brand border-b-gray-200 bg-white">
       <div className="mx-auto max-w-7xl px-6 py-4">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
@@ -74,7 +74,7 @@ export default function AdminHeader({
                     aria-current={active ? "page" : undefined}
                     className={
                       active
-                        ? "rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white"
+                        ? "rounded-md bg-brand-soft px-3 py-2 text-sm font-semibold text-brand-strong"
                         : "rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-gray-950"
                     }
                   >

@@ -170,7 +170,7 @@ export default function StudentForm({
         <button
           type="submit"
           disabled={isPending || availableProfiles.length === 0}
-          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? "Configuring..." : "Configure student"}
         </button>

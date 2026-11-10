@@ -510,7 +510,7 @@ export default async function AdminSupervisionsPage() {
                       <div className="flex flex-wrap gap-2">
                         <Link
                           href={`/admin/supervisions/${supervisionCase.id}`}
-                          className="h-fit rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                          className="h-fit rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-strong"
                         >
                           Open workspace
                         </Link>

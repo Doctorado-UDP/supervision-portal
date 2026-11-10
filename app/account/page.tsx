@@ -59,7 +59,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900">
-      <header className="border-b border-gray-200 bg-white">
+      <header className="border-t-[3px] border-b border-t-brand border-b-gray-200 bg-white">
         <div className="mx-auto flex min-h-20 w-full max-w-5xl items-center justify-between gap-6 px-6">
           <Link href={backHref} className="flex items-center gap-4">
             <Image
@@ -77,7 +77,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
 
           <Link
             href={backHref}
-            className="text-sm font-medium text-gray-600 underline-offset-4 hover:text-gray-950 hover:underline"
+            className="text-sm font-medium text-brand-strong underline-offset-4 hover:text-brand hover:underline"
           >
             Back to portal
           </Link>
@@ -147,7 +147,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
               </div>
               <button
                 type="submit"
-                className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-strong"
               >
                 Save name
               </button>
@@ -199,7 +199,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
                 </p>
                 <button
                   type="submit"
-                  className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                  className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-strong"
                 >
                   Change email
                 </button>
@@ -257,7 +257,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
               </p>
               <button
                 type="submit"
-                className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-strong"
               >
                 Change password
               </button>

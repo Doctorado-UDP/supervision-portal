@@ -18,7 +18,7 @@ function formatReleaseDate(value: string) {
 export default function ReleaseNotesPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900">
-      <header className="border-b border-gray-200 bg-white px-6 py-5">
+      <header className="border-t-[3px] border-b border-t-brand border-b-gray-200 bg-white px-6 py-5">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Link href="/dashboard" className="flex items-center gap-4">
             <Image
@@ -36,7 +36,7 @@ export default function ReleaseNotesPage() {
 
           <Link
             href="/dashboard"
-            className="text-sm font-medium text-gray-700 underline-offset-4 hover:text-gray-950 hover:underline"
+            className="text-sm font-medium text-brand-strong underline-offset-4 hover:text-brand hover:underline"
           >
             Back to portal
           </Link>

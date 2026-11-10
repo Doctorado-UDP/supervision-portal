@@ -460,7 +460,7 @@ export default async function StudentPage() {
                 href={SITE_CONFIG.savvyCalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-flex rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                className="mt-3 inline-flex rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-strong"
               >
                 Book a supervision meeting
               </a>

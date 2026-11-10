@@ -47,7 +47,7 @@ export default function RichFeedback({ children }: RichFeedbackProps) {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-gray-900 underline underline-offset-2"
+              className="font-medium text-brand-strong underline underline-offset-2 hover:text-brand"
             >
               {children}
             </a>

@@ -486,7 +486,7 @@ export default function SubmissionUploadForm({
         disabled={
           uploading
         }
-        className="w-full rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-md bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-50"
       >
         {uploading
           ? "Uploading..."
