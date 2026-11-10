@@ -1,5 +1,34 @@
 # CHANGELOG
 
+## v0.1.0-beta.8 — in development
+
+### Status
+
+- Beta.8 development has started and is ongoing.
+- The release date and codename are to be confirmed.
+- Additional beta.8 changes will be added to this section as development continues.
+- Beta.7 remains the current released beta and continues to be shown in the portal footer until beta.8 is released.
+
+### Feedback rendering
+
+- Fixed the layout of mathematical notation in feedback. The portal imported the KaTeX 0.18 stylesheet, but `rehype-katex` and `remark-math` rendered with a nested KaTeX 0.16, whose `base`, `strut`, `sizing` and `accent` classes the 0.18 stylesheet no longer styles (it uses `katex-base`, `katex-strut`, `katex-sizing` and `katex-accent`). Sub- and superscript sizes, baseline alignment and accents therefore lacked their styles.
+- Updated KaTeX to `0.19.1` and added an npm `overrides` entry (`"katex": "$katex"`) so the renderer and the stylesheet always use the same KaTeX. A rendering check of inline and display maths, an `aligned` environment, a table and an invalid expression produced identical markup apart from the renamed classes and no warnings.
+- This also removes the nested KaTeX copies behind the low-severity advisory GHSA-238p-pmpm-9mq7; `npm audit --omit=dev` reports no vulnerabilities.
+
+### Dependencies
+
+- Updated Next.js and `eslint-config-next` from `16.4.5` to `16.4.6` (bug fixes; no security advisories), keeping both exactly pinned.
+- Updated React and React DOM from `19.2.8` to `19.3.1`, keeping both exactly pinned.
+- Updated `@supabase/ssr` to `0.12.7`, `@supabase/supabase-js` to `2.119.0`, Tailwind CSS to `4.3.5`, the type packages, and the Supabase CLI to `2.122.1` (exactly pinned). The Edge Functions remain pinned to `@supabase/supabase-js@2.112.3` and were not redeployed.
+- These updates supersede Dependabot PR #14.
+- A moderate `minimatch` advisory remains in the ESLint tooling (development dependencies only, not shipped); no compatible fix is available yet.
+
+### Repository
+
+- `CLAUDE.md` is no longer tracked; `AGENTS.md` remains in the repository.
+
+---
+
 ## v0.1.0-beta.7 "Autumn Forge"
 
 ### Summary
