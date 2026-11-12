@@ -40,7 +40,7 @@
 
 ### Repository
 
-- `CLAUDE.md` is no longer tracked; `AGENTS.md` remains in the repository.
+- Local agent notes are no longer tracked; `AGENTS.md` remains in the repository.
 
 ---
 
